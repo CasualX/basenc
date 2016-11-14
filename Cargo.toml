@@ -1,0 +1,27 @@
+[package]
+name = "basenc"
+version = "0.1.0"
+authors = ["CasualX <CasualX@GitHub.com>"]
+
+description = "Encoding and decoding of Base-N encodings, no_std compatible."
+
+documentation = "https://docs.rs/basenc/"
+repository = "https://github.com/CasualX/basenc"
+
+readme = "readme.md"
+
+keywords = []
+
+license = "MIT"
+
+[features]
+default = ["std", "lut"]
+
+# Support STD convenience
+std = []
+
+# Use lookup tables instead of chained comparisons
+lut = []
+
+# Make available the unstable details
+unstable = []
