@@ -132,6 +132,8 @@ pub trait Encoding {
 ///
 /// # Examples
 ///
+/// Convenience, appends to a by-value buffer and returns that buffer.
+///
 /// ```
 /// assert_eq!(
 /// 	basenc::encode(b"hello world", basenc::Base64Std, String::new()),
@@ -139,7 +141,7 @@ pub trait Encoding {
 /// );
 /// ```
 ///
-/// Convenience, appends to a by-value buffer and returns that buffer.
+/// Appends to an existing buffer, returns a reference to the encoded input.
 ///
 /// ```
 /// let mut str_buf = String::from("output: ");
@@ -150,7 +152,9 @@ pub trait Encoding {
 /// assert_eq!(str_buf, "output: QnVGZkVyIFJlVXNFIQ");
 /// ```
 ///
-/// Appends to an existing buffer, returns a reference to the encoded input.
+/// Uses fixed-size arrays on the stack as a buffer, available with `#[no_std]`.
+///
+/// Panics if the buffer is too small to fit the output.
 ///
 /// ```
 /// let mut stack_buf = [0u8; 16];
@@ -159,10 +163,6 @@ pub trait Encoding {
 /// 	"0080ffdc"
 /// );
 /// ```
-///
-/// Uses fixed-size arrays on the stack as a buffer, available with `#[no_std]`.
-///
-/// Panics if the buffer is too small to fit the output.
 pub fn encode<C: Encoding, B: EncodeBuf>(bytes: &[u8], encoding: C, buffer: B) -> B::Output {
 	encoding.encode(bytes, buffer)
 }
@@ -173,6 +173,8 @@ pub fn encode<C: Encoding, B: EncodeBuf>(bytes: &[u8], encoding: C, buffer: B) -
 /// Decoding may fail and produce an [`Error`](enum.Error.html) instead.
 ///
 /// # Examples
+///
+/// Convenience, appends to a by-value buffer and returns that buffer.
 ///
 /// ```
 /// assert_eq!(
@@ -186,18 +188,20 @@ pub fn encode<C: Encoding, B: EncodeBuf>(bytes: &[u8], encoding: C, buffer: B) -
 /// );
 /// ```
 ///
-/// Convenience, appends to a by-value buffer and returns that buffer.
+/// Appends to an existing buffer, returns a reference to the decoded input.
 ///
 /// ```
-/// let mut byte_buf = vec![0x11, 0x22, 0x33];
+/// let mut vec_buf = vec![0x11, 0x22, 0x33];
 /// assert_eq!(
-/// 	basenc::decode("QnVGZkVyIFJlVXNFIQ", basenc::Base64Url, &mut byte_buf),
+/// 	basenc::decode("QnVGZkVyIFJlVXNFIQ", basenc::Base64Url, &mut vec_buf),
 /// 	Ok(&b"BuFfEr ReUsE!"[..])
 /// );
-/// assert_eq!(byte_buf, b"\x11\x22\x33BuFfEr ReUsE!");
+/// assert_eq!(vec_buf, b"\x11\x22\x33BuFfEr ReUsE!");
 /// ```
 ///
-/// Appends to an existing buffer, returns a reference to the decoded input.
+/// Uses fixed-size arrays on the stack as a buffer, available with `#[no_std]`.
+///
+/// Panics if the buffer is too small to fit the output.
 ///
 /// ```
 /// let mut stack_buf = [0u8; 16];
@@ -206,10 +210,6 @@ pub fn encode<C: Encoding, B: EncodeBuf>(bytes: &[u8], encoding: C, buffer: B) -
 /// 	Ok(&b"\x00\x80\xFF\xDC"[..])
 /// );
 /// ```
-///
-/// Uses fixed-size arrays on the stack as a buffer, available with `#[no_std]`.
-///
-/// Panics if the buffer is too small to fit the output.
 pub fn decode<C: Encoding, B: DecodeBuf>(string: &str, encoding: C, buffer: B) -> Result<B::Output, Error> {
 	encoding.decode(string, buffer)
 }
