@@ -19,11 +19,12 @@ use core::str::from_utf8_unchecked;
 ///
 /// # Examples
 ///
-/// Start by calculating the `upper_bound` of memory needed for decoding and `buffer.alloc(upper_bound)` it.
+/// Start by calculating the `upper_bound` of memory needed for decoding and `buffer.allocate(upper_bound)` it.
 ///
 /// Write at most `upper_bound` of decoded bytes to this memory and `buffer.commit(len)` where `len` is the actual number of bytes written.
 pub trait DecodeBuf {
 	type Output;
+
 	/// Returns uninitialized memory of the requested length.
 	///
 	/// Increases the underlying buffer's capacity and returns those extra bytes without touching the buffer length.
@@ -31,8 +32,9 @@ pub trait DecodeBuf {
 	/// # Safety
 	///
 	/// The returned memory is logically uninitialized.
-	unsafe fn alloc(&mut self, len: usize) -> *mut u8;
-	/// Commits `len` bytes previously `alloc`ated.
+	unsafe fn allocate(&mut self, len: usize) -> *mut u8;
+
+	/// Commits `len` bytes previously allocated.
 	///
 	/// Sets the buffer length effectively appending the written bytes to the output.
 	///
@@ -40,15 +42,15 @@ pub trait DecodeBuf {
 	///
 	/// # Safety
 	///
-	/// The `commit`ted `len` must be less than or equal to the earlier `alloc`ated `len`.
+	/// The committed `len` must be less than or equal to the earlier allocated `len`.
 	///
-	/// The buffer must not be touched in between calling `alloc` and `commit`.
+	/// The buffer must not be touched in between calling `allocate` and `commit`.
 	unsafe fn commit(self, len: usize) -> Self::Output;
 }
 
 impl<'a> DecodeBuf for &'a mut [u8] {
 	type Output = &'a [u8];
-	unsafe fn alloc(&mut self, len: usize) -> *mut u8 {
+	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
 		assert!(self.len() >= len, "buffer too small");
 		self.as_mut_ptr()
 	}
@@ -60,13 +62,8 @@ impl<'a> DecodeBuf for &'a mut [u8] {
 #[cfg(any(test, feature = "std"))]
 impl DecodeBuf for ::std::vec::Vec<u8> {
 	type Output = ::std::vec::Vec<u8>;
-	unsafe fn alloc(&mut self, len: usize) -> *mut u8 {
-		// Ensure capacity
-		let reserve = self.capacity() - self.len();
-		if reserve < len {
-			self.reserve(len - reserve);
-		}
-		// Alloc at the end
+	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
+		self.reserve(len);
 		self.as_mut_ptr().offset(self.len() as isize)
 	}
 	unsafe fn commit(mut self, len: usize) -> Self::Output {
@@ -79,16 +76,11 @@ impl DecodeBuf for ::std::vec::Vec<u8> {
 #[cfg(any(test, feature = "std"))]
 impl<'a> DecodeBuf for &'a mut ::std::vec::Vec<u8> {
 	type Output = &'a [u8];
-	unsafe fn alloc(&mut self, len: usize) -> *mut u8 {
-		// Ensure capacity
-		let reserve = self.capacity() - self.len();
-		if reserve < len {
-			self.reserve(len - reserve);
-		}
-		// Alloc at the end
+	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
+		self.reserve(len);
 		self.as_mut_ptr().offset(self.len() as isize)
 	}
-	unsafe fn commit(mut self, len: usize) -> Self::Output {
+	unsafe fn commit(self, len: usize) -> Self::Output {
 		let start = self.len();
 		self.set_len(start + len);
 		from_raw_parts(self.as_ptr().offset(start as isize), len)
@@ -109,11 +101,12 @@ impl<'a> DecodeBuf for &'a mut ::std::vec::Vec<u8> {
 ///
 /// # Examples
 ///
-/// Start by calculating the `upper_bound` of memory needed for encoding and `buffer.alloc(upper_bound)` it.
+/// Start by calculating the `upper_bound` of memory needed for encoding and `buffer.allocate(upper_bound)` it.
 ///
 /// Write at most `upper_bound` of valid utf-8 bytes to this memory and `buffer.commit(len)` where `len` is the actual number of utf-8 bytes written.
 pub trait EncodeBuf {
 	type Output;
+
 	/// Returns uninitialized memory of the requested length.
 	///
 	/// Increases the underlying buffer's capacity and returns those extra bytes without touching the buffer length.
@@ -121,8 +114,9 @@ pub trait EncodeBuf {
 	/// # Safety
 	///
 	/// The returned memory is logically uninitialized.
-	unsafe fn alloc(&mut self, len: usize) -> *mut u8;
-	/// Commits `len` bytes previously `alloc`ated.
+	unsafe fn allocate(&mut self, len: usize) -> *mut u8;
+
+	/// Commits `len` bytes previously allocated.
 	///
 	/// Sets the buffer length effectively appending the written bytes to the output.
 	///
@@ -130,17 +124,17 @@ pub trait EncodeBuf {
 	///
 	/// # Safety
 	///
-	/// The `commit`ted `len` must be less than or equal to the earlier `alloc`ated `len`.
+	/// The committed `len` must be less than or equal to the earlier allocated `len`.
 	///
 	/// The bytes written must be valid utf-8.
 	///
-	/// The buffer must not be touched in between calling `alloc` and `commit`.
+	/// The buffer must not be touched in between calling `allocate` and `commit`.
 	unsafe fn commit(self, len: usize) -> Self::Output;
 }
 
 impl<'a> EncodeBuf for &'a mut [u8] {
 	type Output = &'a str;
-	unsafe fn alloc(&mut self, len: usize) -> *mut u8 {
+	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
 		assert!(self.len() >= len, "buffer too small");
 		self.as_mut_ptr()
 	}
@@ -152,18 +146,13 @@ impl<'a> EncodeBuf for &'a mut [u8] {
 #[cfg(any(test, feature = "std"))]
 impl EncodeBuf for ::std::string::String {
 	type Output = ::std::string::String;
-	unsafe fn alloc(&mut self, len: usize) -> *mut u8 {
+	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
 		let vec = self.as_mut_vec();
-		// Ensure capacity
-		let reserve = vec.capacity() - vec.len();
-		if reserve < len {
-			vec.reserve(len - reserve);
-		}
-		// Alloc at the end
+		vec.reserve(len);
 		vec.as_mut_ptr().offset(vec.len() as isize)
 	}
 	unsafe fn commit(mut self, len: usize) -> Self::Output {
-		/* Scope `vec: &mut Vec<u8>` */ {
+		{
 			let vec = self.as_mut_vec();
 			let new_len = vec.len() + len;
 			vec.set_len(new_len);
@@ -175,21 +164,15 @@ impl EncodeBuf for ::std::string::String {
 #[cfg(any(test, feature = "std"))]
 impl<'a> EncodeBuf for &'a mut ::std::string::String {
 	type Output = &'a str;
-	unsafe fn alloc(&mut self, len: usize) -> *mut u8 {
+	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
 		let vec = self.as_mut_vec();
-		// Ensure capacity
-		let reserve = vec.capacity() - vec.len();
-		if reserve < len {
-			vec.reserve(len - reserve);
-		}
-		// Alloc at the end
+		vec.reserve(len);
 		vec.as_mut_ptr().offset(vec.len() as isize)
 	}
-	unsafe fn commit(mut self, len: usize) -> Self::Output {
+	unsafe fn commit(self, len: usize) -> Self::Output {
 		let vec = self.as_mut_vec();
 		let start = vec.len();
-		let new_len = vec.len() + len;
-		vec.set_len(new_len);
+		vec.set_len(start + len);
 		from_utf8_unchecked(from_raw_parts(vec.as_ptr().offset(start as isize), len))
 	}
 }
@@ -197,16 +180,11 @@ impl<'a> EncodeBuf for &'a mut ::std::string::String {
 #[cfg(any(test, feature = "std"))]
 impl<'a> EncodeBuf for &'a mut ::std::vec::Vec<u8> {
 	type Output = &'a str;
-	unsafe fn alloc(&mut self, len: usize) -> *mut u8 {
-		// Ensure capacity
-		let reserve = self.capacity() - self.len();
-		if reserve < len {
-			self.reserve(len - reserve);
-		}
-		// Alloc at the end
+	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
+		self.reserve(len);
 		self.as_mut_ptr().offset(self.len() as isize)
 	}
-	unsafe fn commit(mut self, len: usize) -> Self::Output {
+	unsafe fn commit(self, len: usize) -> Self::Output {
 		let start = self.len();
 		self.set_len(start + len);
 		from_utf8_unchecked(from_raw_parts(self.as_ptr().offset(start as isize), len))
