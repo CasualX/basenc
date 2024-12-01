@@ -4,56 +4,68 @@ BaseNC
 
 Encoding and decoding of Base-N encodings, `#[no_std]` compatible.
 
-Encoding trait
---------------
+Examples
+--------
 
-The hero of the show is [`Encoding`](trait.Encoding.html), defining the entry point for encoding and decoding for an encoding.
+Encoding:
 
-The trait is implemented by unit structs, eg. `Base64Std`, allowing type inference to help out.
+```
+let encoded = basenc::Base64Std.encode(b"hello world", basenc::Padding::Optional);
+assert_eq!(encoded, "aGVsbG8gd29ybGQ");
+```
 
-The hero has two sidekicks: [`Encoder`](trait.Encoder.html) and [`Decoder`](trait.Decoder.html) providing access to the encoding's iterator adapters.
+Decoding:
 
-Buffer to buffer
-----------------
+```
+let decoded = basenc::Base64Std.decode("aGVsbG8gd29ybGQ=", basenc::Padding::Optional).unwrap();
+assert_eq!(decoded, b"hello world");
+```
 
-When you have an input buffer, `&[u8]` or `&str`, and want to encode or decode respectively to a new buffer
-can be done conveniently using the [`encode`](fn.encode.html) and [`decode`](fn.decode.html) free functions.
+Encoding
+--------
 
-They are ensured to be implemented efficiently and avoid code bloat.
+The hero of the show is [`Encoding`], defining the entry point for encoding and decoding for an encoding.
 
-### Buffers
+Buffers
+-------
 
-A side note about buffers, they are types implementing the [`EncodeBuf`](trait.EncodeBuf.html) and [`DecodeBuf`](trait.DecodeBuf.html) traits.
+Buffers are types implementing the [`EncodeBuf`] and [`DecodeBuf`] traits.
 
-Under `#[no_std]` they are only implemented by `&mut [u8]` acting as a fixed size buffer.
-
-Otherwise `EncodeBuf` is implemented by `String` for convenience and `&mut String` and `&mut Vec<u8>` for efficient buffer reuse.
-`DecodeBuf` is implemented by `Vec<u8>` for convenience and `&mut Vec<u8>` for efficient buffer reuse.
-
-Iterator adapters
------------------
-
-For maximum flexibility the encoding and decoding can be pipelined as an iterator adapter.
-
-The trait [`Encode`](trait.Encode.html) adapts an iterator over bytes given an encoding into an iterator over chars of the encoded input.
-
-The trait [`Decode`](trait.Decode.html) adapts an iterator over chars given an encoding into an iterator over the resulting bytes of the decoded input.
+Existing buffers can be reused with the [`encode_into`](Encoding::encode_into) and [`decode_into`](Encoding::decode_into) methods.
 
 */
 
 #![no_std]
 
+#[allow(unused_imports)]
+use core::{fmt, mem, ptr, slice, str};
+
 #[cfg(any(test, feature = "std"))]
 #[macro_use]
 extern crate std;
 
-#[cfg(feature = "unstable")]
-pub mod details;
-#[cfg(not(feature = "unstable"))]
-mod details;
+#[macro_use]
+mod encoding;
+
+#[macro_use]
+mod arch;
+
+mod ratio;
+pub use self::ratio::Ratio;
 
 mod buf;
-pub use buf::{EncodeBuf, DecodeBuf};
+pub use self::buf::*;
+
+mod hex;
+pub use self::hex::*;
+
+mod base64;
+pub use self::base64::*;
+
+mod base32;
+pub use self::base32::*;
+
+pub mod incremental;
 
 //----------------------------------------------------------------
 
@@ -61,240 +73,91 @@ pub use buf::{EncodeBuf, DecodeBuf};
 ///
 /// Note that encoding can never fail.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[non_exhaustive]
 pub enum Error {
 	/// Not a valid character in the alphabet.
-	InvalidChar(char),
+	InvalidCharacter,
 	/// Input has incorrect length or is not padded to the required length.
-	BadLength,
+	IncorrectLength,
 	/// Input is not canonical.
 	///
 	/// Unused padding MUST consist of zero bits.
-	Denormal,
+	NonCanonical,
 }
 
-use ::core::fmt;
 impl fmt::Display for Error {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-		match *self {
-			Error::InvalidChar(chr) => write!(f, "invalid char: {}", chr),
-			Error::BadLength => write!(f, "bad length"),
-			Error::Denormal => write!(f, "denormal"),
-		}
+		f.write_str(match self {
+			Error::InvalidCharacter => "invalid character",
+			Error::IncorrectLength => "incorrect length",
+			Error::NonCanonical => "non-canonical input",
+		})
 	}
 }
-#[cfg(any(test, feature = "std"))]
-impl ::std::error::Error for Error {
-	fn description(&self) -> &str {
-		match *self {
-			Error::InvalidChar(_) => "invalid char",
-			Error::BadLength => "bad length",
-			Error::Denormal => "denormal",
+
+#[cfg(feature = "std")]
+impl std::error::Error for Error {}
+
+//----------------------------------------------------------------
+
+/// Padding policy.
+#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
+pub enum Padding {
+	/// No padding.
+	None,
+	/// Optional padding.
+	///
+	/// Padding accepted while decoding, not added while encoding.
+	#[default]
+	Optional,
+	/// Strict padding.
+	Strict,
+}
+
+pub use self::Padding::None as NoPad;
+
+//----------------------------------------------------------------
+
+/// Display wrapper for encoding.
+#[derive(Clone, Debug)]
+pub struct Display<'a, E> {
+	encoding: &'a E,
+	bytes: &'a [u8],
+	pad: Padding,
+}
+
+impl<'a, E: Encoding> Display<'a, E> {
+	/// Wraps the encoding and bytes for display.
+	#[inline]
+	pub fn new(encoding: &'a E, bytes: &'a [u8], pad: Padding) -> Self {
+		Self { encoding, bytes, pad }
+	}
+}
+
+impl<'a, E: Encoding> fmt::Display for Display<'a, E> {
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		let mut stack_buf = mem::MaybeUninit::<[u8; 512]>::uninit();
+		let chunk_size = E::RATIO.encoding_chunk_size(mem::size_of_val(&stack_buf));
+
+		for chunk in self.bytes.chunks(chunk_size) {
+			let string = self.encoding.encode_into(chunk, self.pad, &mut stack_buf);
+			f.write_str(string)?;
 		}
+
+		Ok(())
 	}
 }
 
 //----------------------------------------------------------------
 
 /// Data encoding.
-///
-/// Use the free-standing functions to avoid having to drag in this trait.
 pub trait Encoding {
-	/// Returns the encoding's alphabet.
-	///
-	/// # Examples
-	///
-	/// ```
-	/// use basenc::{Encoding};
-	///
-	/// assert_eq!(
-	/// 	basenc::LowerHex.alphabet(),
-	/// 	"0123456789abcdef"
-	/// );
-	/// ```
-	fn alphabet(self) -> &'static str;
+	/// Encoding ratio of decoded to encoded bytes.
+	const RATIO: Ratio;
 
-	/// Directly encode into an encode buffer.
-	///
-	/// Use [`encode`](fn.encode.html) for convenience.
-	fn encode<B: EncodeBuf>(self, bytes: &[u8], buffer: B) -> B::Output;
+	/// Encodes into an encoding buffer.
+	fn encode_into<B: EncodeBuf>(&self, bytes: &[u8], pad: Padding, buffer: B) -> B::Output;
 
-	/// Directly decode into a decode buffer.
-	///
-	/// Use [`decode`](fn.decode.html) for convenience.
-	fn decode<B: DecodeBuf>(self, string: &str, buffer: B) -> Result<B::Output, Error>;
+	/// Decodes into a decoding buffer.
+	fn decode_into<B: DecodeBuf>(&self, string: &[u8], pad: Padding, buffer: B) -> Result<B::Output, Error>;
 }
-
-/// Directly encode into an encode buffer.
-///
-/// Convenient as it doesn't require the [`Encoding`](trait.Encoding.html) trait to be imported.
-///
-/// Note that encoding can never fail.
-///
-/// # Examples
-///
-/// Convenience, appends to a by-value buffer and returns that buffer.
-///
-/// ```
-/// assert_eq!(
-/// 	basenc::encode(b"hello world", basenc::Base64Std, String::new()),
-/// 	"aGVsbG8gd29ybGQ="
-/// );
-/// ```
-///
-/// Appends to an existing buffer, returns a reference to the encoded input.
-///
-/// ```
-/// let mut str_buf = String::from("output: ");
-/// assert_eq!(
-/// 	basenc::encode(b"BuFfEr ReUsE!", basenc::Base64Url, &mut str_buf),
-/// 	"QnVGZkVyIFJlVXNFIQ"
-/// );
-/// assert_eq!(str_buf, "output: QnVGZkVyIFJlVXNFIQ");
-/// ```
-///
-/// Uses fixed-size arrays on the stack as a buffer, available with `#[no_std]`.
-///
-/// Panics if the buffer is too small to fit the output.
-///
-/// ```
-/// let mut stack_buf = [0u8; 16];
-/// assert_eq!(
-/// 	basenc::encode(b"\x00\x80\xFF\xDC", basenc::LowerHex, &mut stack_buf[..]),
-/// 	"0080ffdc"
-/// );
-/// ```
-pub fn encode<C: Encoding, B: EncodeBuf>(bytes: &[u8], encoding: C, buffer: B) -> B::Output {
-	encoding.encode(bytes, buffer)
-}
-/// Directly decode into a decode buffer.
-///
-/// Convenient as it doesn't require the [`Encoding`](trait.Encoding.html) trait to be imported.
-///
-/// Decoding may fail and produce an [`Error`](enum.Error.html) instead.
-///
-/// # Examples
-///
-/// Convenience, appends to a by-value buffer and returns that buffer.
-///
-/// ```
-/// assert_eq!(
-/// 	basenc::decode("aGVsbG8gd29ybGQ=", basenc::Base64Std, Vec::new()),
-/// 	Ok(b"hello world"[..].to_vec())
-/// );
-/// // Note that the buffer is swallowed on error
-/// assert_eq!(
-/// 	basenc::decode("&'nv@l!d", basenc::Base64Std, Vec::new()),
-/// 	Err(basenc::Error::InvalidChar('&'))
-/// );
-/// ```
-///
-/// Appends to an existing buffer, returns a reference to the decoded input.
-///
-/// ```
-/// let mut vec_buf = vec![0x11, 0x22, 0x33];
-/// assert_eq!(
-/// 	basenc::decode("QnVGZkVyIFJlVXNFIQ", basenc::Base64Url, &mut vec_buf),
-/// 	Ok(&b"BuFfEr ReUsE!"[..])
-/// );
-/// assert_eq!(vec_buf, b"\x11\x22\x33BuFfEr ReUsE!");
-/// ```
-///
-/// Uses fixed-size arrays on the stack as a buffer, available with `#[no_std]`.
-///
-/// Panics if the buffer is too small to fit the output.
-///
-/// ```
-/// let mut stack_buf = [0u8; 16];
-/// assert_eq!(
-/// 	basenc::decode("0080FFDC", basenc::UpperHex, &mut stack_buf[..]),
-/// 	Ok(&b"\x00\x80\xFF\xDC"[..])
-/// );
-/// ```
-pub fn decode<C: Encoding, B: DecodeBuf>(string: &str, encoding: C, buffer: B) -> Result<B::Output, Error> {
-	encoding.decode(string, buffer)
-}
-
-//----------------------------------------------------------------
-
-/// Create an encoder adapter for an encoding given an `Iterator<Item = u8>`.
-///
-/// Helper for [`Encode`](trait.Encode.html), should be merged into [`Encoding`](trait.Encoding.html) but can't be due to HKT reasons.
-pub trait Encoder<I: Iterator<Item = u8>>: Encoding {
-	type Encoder: Iterator<Item = char>;
-	fn encoder(self, iter: I) -> Self::Encoder;
-}
-/// Byte iterator adapter to an encoder.
-///
-/// Adapts any `Iterator<Item = u8>` into an iterator over the encoded chars.
-///
-/// Beware of code bloat! The entire decode logic may get inlined at the invocation site.
-///
-/// # Examples
-///
-/// ```
-/// use basenc::Encode;
-///
-/// assert!(
-/// 	"hello".bytes()
-/// 	.encode(basenc::UpperHex)
-/// 	.eq("68656C6C6F".chars())
-/// );
-///
-/// assert!(
-/// 	b"\xadapters\xff"[..].iter().cloned()
-/// 	.encode(basenc::Base64Url)
-/// 	.eq("rWFwdGVyc_8".chars())
-/// );
-///
-/// assert!(
-/// 	"STRingS".bytes()
-/// 	.encode(basenc::LowerHex)
-/// 	.eq("535452696e6753".chars())
-/// );
-/// ```
-pub trait Encode<I: Iterator<Item = u8>, R: Encoder<I>> {
-	fn encode(self, encoding: R) -> R::Encoder;
-}
-impl<I: Iterator<Item = u8>, R: Encoder<I>> Encode<I, R> for I {
-	fn encode(self, encoding: R) -> R::Encoder {
-		encoding.encoder(self)
-	}
-}
-
-/// Create a decoder adapter for an encoding given an `Iterator<Item = char>`.
-///
-/// Helper for [`Decode`](trait.Decode.html), should be merged into [`Encoding`](trait.Encoding.html) but can't be due to HKT reasons.
-pub trait Decoder<I: Iterator<Item = char>>: Encoding {
-	type Decoder: Iterator<Item = Result<u8, Error>>;
-	fn decoder(self, iter: I) -> Self::Decoder;
-}
-/// Char iterator adapter to a decoder.
-///
-/// Adapts any `Iterator<Item = char>` into an iterator over a result of the decoded bytes.
-///
-/// Beware of code bloat! The entire decode logic may get inlined at the invocation site.
-///
-/// # Examples
-///
-/// ```
-/// use basenc::Decode;
-///
-/// assert!(
-/// 	"68656c6c6F".chars()
-/// 	.decode(basenc::AnyHex)
-/// 	.eq("hello".bytes().map(Ok))
-/// );
-/// ```
-pub trait Decode<I: Iterator<Item = char>, R: Decoder<I>> {
-	fn decode(self, encoding: R) -> R::Decoder;
-}
-impl<I: Iterator<Item = char>, R: Decoder<I>> Decode<I, R> for I {
-	fn decode(self, encoding: R) -> R::Decoder {
-		encoding.decoder(self)
-	}
-}
-
-//----------------------------------------------------------------
-
-pub use details::base64::{Base64Std, Base64Url};
-pub use details::hex::{LowerHex, UpperHex, AnyHex};

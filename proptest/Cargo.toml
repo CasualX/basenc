@@ -1,0 +1,10 @@
+[package]
+name = "basenc_proptest"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+basenc = { path = ".." }
+
+[dev-dependencies]
+proptest = "1.0"
