@@ -1,53 +1,55 @@
 BaseNC
 ======
 
+[![MIT License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![crates.io](https://img.shields.io/crates/v/basenc.svg)](https://crates.io/crates/basenc)
+[![docs.rs](https://docs.rs/basenc/badge.svg)](https://docs.rs/basenc)
+[![Build status](https://github.com/CasualX/basenc/workflows/CI/badge.svg)](https://github.com/CasualX/basenc/actions)
+
 Pronounced "Base-En-See".
 
 Encoding and decoding hex, base64 and base32 with support for `#[no_std]`.
 
-Usage
------
+Examples
+--------
 
-The documentation can be found on [docs.rs](https://docs.rs/basenc/).
+Encoding:
 
-This library can be found on [crates.io](https://crates.io/crates/basenc).
-
-In your Cargo.toml put
-
+```rust
+let encoded = basenc::Base64Std.encode(b"hello world", basenc::Padding::Optional);
+assert_eq!(encoded, "aGVsbG8gd29ybGQ");
 ```
-[dependencies]
-basenc = "0.1"
+
+Decoding:
+
+```rust
+let decoded = basenc::Base64Std.decode("aGVsbG8gd29ybGQ=", basenc::Padding::Optional).unwrap();
+assert_eq!(decoded, b"hello world");
 ```
 
 ### Features
 
-Features available with Cargo.toml
+* `std` (default) - Enable support for the standard library. This enables convenience features to encode and decode to `String` and `Vec<u8>` buffers.
 
-```
-[dependencies.basenc]
-version = "0.1"
-default-features = false
-features = ["std", "lut"]
-```
+* `simd-off` - Disable SIMD acceleration. The SIMD codepaths are less tested and are more likely to contain bugs.
 
-* `std` - Enable support for the standard library. This enables convenience features to encode and decode to `String` and `Vec<u8>` buffers.
+* `simd-runtime` - Enable runtime detection of SIMD support. This is enabled by default and will automatically use SIMD acceleration if available.
 
-* `lut` - Use lookup tables instead of chained comparisons for the translation.
-
-* `unstable` - Expose the unstable inner details of this library. Build docs with this feature to get its documentation.
-
-The default features are [`std`, `lut`]. To enable `#[no_std]` requires disabling default features.
+Build with `RUSTFLAGS="-C target-cpu=native"` (bash) / `set RUSTFLAGS=-C target-cpu=native` (cmd) to enable compiletime detection of SIMD capabilities.
 
 Future work
 -----------
 
-Implement base32 encoding.
-
-Implement better support for esotheric base64 encoding variants.
-
 Profile and optimize for performance.
+
+Implement SIMD accelerated algorithms for encoding and decoding.
 
 License
 -------
 
-MIT, see license.txt
+Licensed under [MIT License](https://opensource.org/licenses/MIT), see [license.txt](license.txt).
+
+### Contribution
+
+Unless you explicitly state otherwise, any contribution intentionally submitted
+for inclusion in the work by you, shall be licensed as above, without any additional terms or conditions.
