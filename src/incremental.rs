@@ -40,5 +40,48 @@ fn decode<E: basenc::Encoding>(encoding: &E, string: &str, pad: basenc::Padding)
 
 */
 
-#[allow(unused_imports)]
 use super::*;
+
+/// An encoder that encodes data incrementally.
+pub struct Encoder<'a, 'buf, E, B> {
+	encoding: &'a E,
+	chunks: slice::Chunks<'a, u8>,
+	pad: Padding,
+	buffer: &'buf mut B,
+}
+
+impl<'a, 'buf, E: Encoding, B: StackBuf> Encoder<'a, 'buf, E, B> {
+	#[inline]
+	pub fn new(encoding: &'a E, bytes: &'a [u8], pad: Padding, buffer: &'buf mut B) -> Encoder<'a, 'buf, E, B> {
+		let chunk_size = E::RATIO.encoding_chunk_size(buffer._len());
+		let chunks = bytes.chunks(chunk_size);
+		Encoder { encoding, chunks, pad, buffer }
+	}
+	#[inline]
+	pub fn next(&'buf mut self) -> Option<&'buf str> {
+		let chunk = self.chunks.next()?;
+		Some(self.encoding.encode_into(chunk, self.pad, &mut *self.buffer))
+	}
+}
+
+/// A decoder that decodes data incrementally.
+pub struct Decoder<'a, 'buf, E, B> {
+	encoding: &'a E,
+	chunks: slice::Chunks<'a, u8>,
+	pad: Padding,
+	buffer: &'buf mut B,
+}
+
+impl<'a, 'buf, E: Encoding, B: StackBuf> Decoder<'a, 'buf, E, B> {
+	#[inline]
+	pub fn new(encoding: &'a E, string: &'a str, pad: Padding, buffer: &'buf mut B) -> Decoder<'a, 'buf, E, B> {
+		let chunk_size = E::RATIO.decoding_chunk_size(buffer._len());
+		let chunks = string.as_bytes().chunks(chunk_size);
+		Decoder { encoding, chunks, pad, buffer }
+	}
+	#[inline]
+	pub fn next(&'buf mut self) -> Option<Result<&'buf [u8], Error>> {
+		let chunk = self.chunks.next()?;
+		Some(self.encoding.decode_into(chunk, self.pad, &mut *self.buffer))
+	}
+}
