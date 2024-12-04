@@ -4,6 +4,42 @@ Abstracting over buffer types.
 
 use core::{mem, slice, str};
 
+pub unsafe trait StackBuf {
+	fn _as_ptr(&self) -> *const u8;
+	fn _as_mut_ptr(&mut self) -> *mut u8;
+	fn _len(&self) -> usize;
+}
+
+unsafe impl<const N: usize> StackBuf for mem::MaybeUninit<[u8; N]> {
+	#[inline] fn _as_ptr(&self) -> *const u8 { (*self).as_ptr() as *const u8 }
+	#[inline] fn _as_mut_ptr(&mut self) -> *mut u8 { (*self).as_mut_ptr() as *mut u8 }
+	#[inline] fn _len(&self) -> usize { N }
+}
+
+unsafe impl<const N: usize> StackBuf for [u8; N] {
+	#[inline] fn _as_ptr(&self) -> *const u8 { self as *const [u8; N] as *const u8 }
+	#[inline] fn _as_mut_ptr(&mut self) -> *mut u8 { self as *mut [u8; N] as *mut u8 }
+	#[inline] fn _len(&self) -> usize { N }
+}
+
+unsafe impl<const N: usize> StackBuf for [mem::MaybeUninit<u8>; N] {
+	#[inline] fn _as_ptr(&self) -> *const u8 { self as *const _ as *const u8 }
+	#[inline] fn _as_mut_ptr(&mut self) -> *mut u8 { self as *mut _ as *mut u8 }
+	#[inline] fn _len(&self) -> usize { N }
+}
+
+unsafe impl StackBuf for [u8] {
+	#[inline] fn _as_ptr(&self) -> *const u8 { (*self).as_ptr() }
+	#[inline] fn _as_mut_ptr(&mut self) -> *mut u8 { (*self).as_mut_ptr() }
+	#[inline] fn _len(&self) -> usize { (*self).len() }
+}
+
+unsafe impl StackBuf for [mem::MaybeUninit<u8>] {
+	#[inline] fn _as_ptr(&self) -> *const u8 { (*self).as_ptr() as *const u8 }
+	#[inline] fn _as_mut_ptr(&mut self) -> *mut u8 { (*self).as_mut_ptr() as *mut u8 }
+	#[inline] fn _len(&self) -> usize { (*self).len() }
+}
+
 //----------------------------------------------------------------
 
 /// Byte buffer receiving decoded input.
@@ -58,73 +94,17 @@ pub trait DecodeBuf {
 	unsafe fn commit(self, len: usize) -> Self::Output;
 }
 
-impl<'a, const N: usize> DecodeBuf for &'a mut mem::MaybeUninit<[u8; N]> {
+impl<'a, T: StackBuf + ?Sized> DecodeBuf for &'a mut T {
 	type Output = &'a [u8];
 	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
-		if len > N {
+		if len > self._len() {
 			buffer_too_small();
 		}
-		self.as_mut_ptr() as *mut u8
+		self._as_mut_ptr()
 	}
 	unsafe fn commit(self, len: usize) -> Self::Output {
-		debug_assert!(len <= N);
-		slice::from_raw_parts(self.as_ptr() as *const u8, len)
-	}
-}
-
-impl<'a, const N: usize> DecodeBuf for &'a mut [mem::MaybeUninit<u8>; N] {
-	type Output = &'a [u8];
-	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
-		if len > N {
-			buffer_too_small();
-		}
-		self.as_mut_ptr() as *mut u8
-	}
-	unsafe fn commit(self, len: usize) -> Self::Output {
-		debug_assert!(len <= N);
-		slice::from_raw_parts(self.as_ptr() as *const u8, len)
-	}
-}
-
-impl<'a, const N: usize> DecodeBuf for &'a mut [u8; N] {
-	type Output = &'a [u8];
-	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
-		if len > N {
-			buffer_too_small();
-		}
-		self.as_mut_ptr()
-	}
-	unsafe fn commit(self, len: usize) -> Self::Output {
-		debug_assert!(len <= N);
-		slice::from_raw_parts(self.as_ptr(), len)
-	}
-}
-
-impl<'a> DecodeBuf for &'a mut [mem::MaybeUninit<u8>] {
-	type Output = &'a [u8];
-	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
-		if len > self.len() {
-			buffer_too_small();
-		}
-		self.as_mut_ptr() as *mut u8
-	}
-	unsafe fn commit(self, len: usize) -> Self::Output {
-		debug_assert!(len <= self.len());
-		slice::from_raw_parts(self.as_ptr() as *const u8, len)
-	}
-}
-
-impl<'a> DecodeBuf for &'a mut [u8] {
-	type Output = &'a [u8];
-	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
-		if len > self.len() {
-			buffer_too_small();
-		}
-		self.as_mut_ptr()
-	}
-	unsafe fn commit(self, len: usize) -> Self::Output {
-		debug_assert!(len <= self.len());
-		slice::from_raw_parts(self.as_ptr(), len)
+		debug_assert!(len <= self._len());
+		slice::from_raw_parts(self._as_ptr(), len)
 	}
 }
 
@@ -212,78 +192,17 @@ pub trait EncodeBuf {
 	unsafe fn commit(self, len: usize) -> Self::Output;
 }
 
-impl<'a, const N: usize> EncodeBuf for &'a mut mem::MaybeUninit<[u8; N]> {
+impl<'a, T: StackBuf + ?Sized> EncodeBuf for &'a mut T {
 	type Output = &'a str;
 	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
-		if len > N {
+		if len > self._len() {
 			buffer_too_small();
 		}
-		self.as_mut_ptr() as *mut u8
+		self._as_mut_ptr()
 	}
 	unsafe fn commit(self, len: usize) -> Self::Output {
-		debug_assert!(len <= N);
-		let bytes = slice::from_raw_parts(self.as_ptr() as *const u8, len);
-		str::from_utf8_unchecked(bytes)
-	}
-}
-
-impl<'a, const N: usize> EncodeBuf for &'a mut [mem::MaybeUninit<u8>; N] {
-	type Output = &'a str;
-	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
-		if len > N {
-			buffer_too_small();
-		}
-		self.as_mut_ptr() as *mut u8
-	}
-	unsafe fn commit(self, len: usize) -> Self::Output {
-		debug_assert!(len <= N);
-		let bytes = slice::from_raw_parts(self.as_ptr() as *const u8, len);
-		str::from_utf8_unchecked(bytes)
-	}
-}
-
-impl<'a, const N: usize> EncodeBuf for &'a mut [u8; N] {
-	type Output = &'a str;
-	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
-		if len > N {
-			buffer_too_small();
-		}
-		self.as_mut_ptr()
-	}
-	unsafe fn commit(self, len: usize) -> Self::Output {
-		debug_assert!(len <= N);
-		let bytes = slice::from_raw_parts(self.as_ptr(), len);
-		str::from_utf8_unchecked(bytes)
-	}
-}
-
-impl<'a> EncodeBuf for &'a mut [mem::MaybeUninit<u8>] {
-	type Output = &'a str;
-	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
-		if len > self.len() {
-			buffer_too_small();
-		}
-		self.as_mut_ptr() as *mut u8
-	}
-	unsafe fn commit(self, len: usize) -> Self::Output {
-		debug_assert!(len <= self.len());
-		let bytes = slice::from_raw_parts(self.as_ptr() as *const u8, len);
-		str::from_utf8_unchecked(bytes)
-	}
-}
-
-impl<'a> EncodeBuf for &'a mut [u8] {
-	type Output = &'a str;
-	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
-		if len > self.len() {
-			buffer_too_small();
-		}
-		self.as_mut_ptr()
-	}
-	unsafe fn commit(self, len: usize) -> Self::Output {
-		debug_assert!(len <= self.len());
-		let bytes = slice::from_raw_parts(self.as_ptr(), len);
-		str::from_utf8_unchecked(bytes)
+		debug_assert!(len <= self._len());
+		str::from_utf8_unchecked(slice::from_raw_parts(self._as_ptr(), len))
 	}
 }
 
