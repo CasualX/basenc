@@ -69,7 +69,6 @@ pub use self::base64::*;
 mod base32;
 pub use self::base32::*;
 
-#[cfg(doc)]
 pub mod incremental;
 
 //----------------------------------------------------------------
