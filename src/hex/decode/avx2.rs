@@ -1,7 +1,12 @@
 // https://github.com/zbjornson/fast-hex
+#[cfg(target_arch = "x86")]
+use core::arch::x86::*;
+#[cfg(target_arch = "x86_64")]
+use core::arch::x86_64::*;
 
-use std::arch::x86_64::*;
+use super::*;
 
+#[target_feature(enable = "avx2")]
 unsafe fn unhex(value: __m256i) -> __m256i {
 	let and15 = _mm256_and_si256(value, _mm256_set1_epi16(0x0F));
 
@@ -12,6 +17,7 @@ unsafe fn unhex(value: __m256i) -> __m256i {
 	return add;
 }
 
+#[target_feature(enable = "avx2")]
 unsafe fn nib2bytes(a1: __m256i, b1: __m256i, a2: __m256i, b2: __m256i) -> __m256i {
 	let a4_1 = _mm256_slli_epi16(a1, 4);
 	let a4_2 = _mm256_slli_epi16(a2, 4);
@@ -26,7 +32,8 @@ unsafe fn nib2bytes(a1: __m256i, b1: __m256i, a2: __m256i, b2: __m256i) -> __m25
 	return pck64;
 }
 
-pub unsafe fn decode(src: *const u8, mut len: usize, dest: *mut u8) {
+#[target_feature(enable = "avx2")]
+pub unsafe fn decode(mut string: &[u8], mut dest: *mut u8) -> Result<*mut u8, crate::Error> {
 	let a_mask = _mm256_setr_epi8(
 		0, -1, 2, -1, 4, -1, 6, -1, 8, -1, 10, -1, 12, -1, 14, -1,
 		0, -1, 2, -1, 4, -1, 6, -1, 8, -1, 10, -1, 12, -1, 14, -1);
@@ -34,24 +41,15 @@ pub unsafe fn decode(src: *const u8, mut len: usize, dest: *mut u8) {
 		1, -1, 3, -1, 5, -1, 7, -1, 9, -1, 11, -1, 13, -1, 15, -1,
 		1, -1, 3, -1, 5, -1, 7, -1, 9, -1, 11, -1, 13, -1, 15, -1);
 
-	let mut src = src as *const __m256i;
-	let mut dest = dest as *mut __m256i;
-	while len >= 32 {
-		let av1 = _mm256_lddqu_si256(src.offset(0));
+	while string.len() >= 64 {
+		let src = string.as_ptr() as *const __m256i;
+		let av1 = _mm256_lddqu_si256(src);
 		let av2 = _mm256_lddqu_si256(src.offset(1));
-
-		eprintln!("av1={:x?}", av1);
-		eprintln!("av2={:x?}", av2);
 
 		let a1 = _mm256_shuffle_epi8(av1, a_mask);
 		let b1 = _mm256_shuffle_epi8(av1, b_mask);
 		let a2 = _mm256_shuffle_epi8(av2, a_mask);
 		let b2 = _mm256_shuffle_epi8(av2, b_mask);
-
-		eprintln!("a1={:x?}", a1);
-		eprintln!("b1={:x?}", b1);
-		eprintln!("a2={:x?}", a2);
-		eprintln!("b2={:x?}", b2);
 
 		let a1 = unhex(a1);
 		let b1 = unhex(b1);
@@ -60,25 +58,11 @@ pub unsafe fn decode(src: *const u8, mut len: usize, dest: *mut u8) {
 
 		let bytes = nib2bytes(a1, b1, a2, b2);
 
-		_mm256_storeu_si256(dest, bytes);
+		_mm256_storeu_si256(dest as *mut __m256i, bytes);
 
-		src = src.offset(2);
-		dest = dest.offset(1);
-		len -= 32;
+		string = &string[64..];
+		dest = dest.offset(32);
 	}
 
-	let _ = super::decode::decode(src as *const u8, len, dest as *mut u8);
+	scalar::decode(string, dest)
 }
-
-// #[test]
-// fn test() {
-// 	let input = b"0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF";
-// 	let mut output = [0u8; 32];
-
-// 	unsafe {
-// 		decode(input.as_ptr(), output.len(), output.as_mut_ptr());
-// 	}
-
-// 	println!("{:x?}", &output);
-// 	panic!();
-// }

@@ -12,6 +12,7 @@ fn lookup(byte: u8, lut: &[u8; 128]) -> Result<u8, crate::Error> {
 	Ok(v)
 }
 
+// aaaaabbb bbcccccd ddddeeee efffffgg ggghhhhh
 #[inline]
 unsafe fn decode_8bytes(chunk: &[u8; 8], base: &Base32, dest: *mut u8) -> Result<*mut u8, crate::Error> {
 	let a = lookup(chunk[0], &base.lut)?;
@@ -23,15 +24,16 @@ unsafe fn decode_8bytes(chunk: &[u8; 8], base: &Base32, dest: *mut u8) -> Result
 	let g = lookup(chunk[6], &base.lut)?;
 	let h = lookup(chunk[7], &base.lut)?;
 
-	*dest.add(0) = (a << 3 | b >> 2) as u8;
-	*dest.add(1) = (b << 6 | c << 1 | d >> 4) as u8;
-	*dest.add(2) = (d << 4 | e >> 1) as u8;
-	*dest.add(3) = (e << 7 | f << 2 | g >> 3) as u8;
-	*dest.add(4) = (g << 5 | h) as u8;
+	*dest.add(0) = a << 3 | b >> 2;
+	*dest.add(1) = b << 6 | c << 1 | d >> 4;
+	*dest.add(2) = d << 4 | e >> 1;
+	*dest.add(3) = e << 7 | f << 2 | g >> 3;
+	*dest.add(4) = g << 5 | h;
 
 	Ok(dest.add(5))
 }
 
+// aaaaabbb bbcccccd ddddeeee efffffgg 000-----
 #[inline]
 unsafe fn decode_7bytes(chunk: &[u8; 7], base: &Base32, dest: *mut u8) -> Result<*mut u8, crate::Error> {
 	let a = lookup(chunk[0], &base.lut)?;
@@ -42,14 +44,19 @@ unsafe fn decode_7bytes(chunk: &[u8; 7], base: &Base32, dest: *mut u8) -> Result
 	let f = lookup(chunk[5], &base.lut)?;
 	let g = lookup(chunk[6], &base.lut)?;
 
-	*dest.add(0) = (a << 3 | b >> 2) as u8;
-	*dest.add(1) = (b << 6 | c << 1 | d >> 4) as u8;
-	*dest.add(2) = (d << 4 | e >> 1) as u8;
-	*dest.add(3) = (e << 7 | f << 2 | g >> 3) as u8;
+	if g & 0x7 != 0 {
+		return Err(crate::Error::NonCanonical);
+	}
+
+	*dest.add(0) = a << 3 | b >> 2;
+	*dest.add(1) = b << 6 | c << 1 | d >> 4;
+	*dest.add(2) = d << 4 | e >> 1;
+	*dest.add(3) = e << 7 | f << 2 | g >> 3;
 
 	Ok(dest.add(4))
 }
 
+// aaaaabbb bbcccccd ddddeeee 0------- --------
 #[inline]
 unsafe fn decode_5bytes(chunk: &[u8; 5], base: &Base32, dest: *mut u8) -> Result<*mut u8, crate::Error> {
 	let a = lookup(chunk[0], &base.lut)?;
@@ -58,13 +65,18 @@ unsafe fn decode_5bytes(chunk: &[u8; 5], base: &Base32, dest: *mut u8) -> Result
 	let d = lookup(chunk[3], &base.lut)?;
 	let e = lookup(chunk[4], &base.lut)?;
 
-	*dest.add(0) = (a << 3 | b >> 2) as u8;
-	*dest.add(1) = (b << 6 | c << 1 | d >> 4) as u8;
-	*dest.add(2) = (d << 4 | e >> 1) as u8;
+	if e & 0x1 != 0 {
+		return Err(crate::Error::NonCanonical);
+	}
+
+	*dest.add(0) = a << 3 | b >> 2;
+	*dest.add(1) = b << 6 | c << 1 | d >> 4;
+	*dest.add(2) = d << 4 | e >> 1;
 
 	Ok(dest.add(3))
 }
 
+// aaaaabbb bbcccccd 0000---- -------- --------
 #[inline]
 unsafe fn decode_4bytes(chunk: &[u8; 4], base: &Base32, dest: *mut u8) -> Result<*mut u8, crate::Error> {
 	let a = lookup(chunk[0], &base.lut)?;
@@ -72,18 +84,27 @@ unsafe fn decode_4bytes(chunk: &[u8; 4], base: &Base32, dest: *mut u8) -> Result
 	let c = lookup(chunk[2], &base.lut)?;
 	let d = lookup(chunk[3], &base.lut)?;
 
-	*dest.add(0) = (a << 3 | b >> 2) as u8;
-	*dest.add(1) = (b << 6 | c << 1 | d >> 4) as u8;
+	if d & 0xf != 0 {
+		return Err(crate::Error::NonCanonical);
+	}
+
+	*dest.add(0) = a << 3 | b >> 2;
+	*dest.add(1) = b << 6 | c << 1 | d >> 4;
 
 	Ok(dest.add(2))
 }
 
+// aaaaabbb 00------ -------- -------- --------
 #[inline]
 unsafe fn decode_2bytes(chunk: &[u8; 2], base: &Base32, dest: *mut u8) -> Result<*mut u8, crate::Error> {
 	let a = lookup(chunk[0], &base.lut)?;
 	let b = lookup(chunk[1], &base.lut)?;
 
-	*dest.add(0) = (a << 3 | b >> 2) as u8;
+	if b & 0x3 != 0 {
+		return Err(crate::Error::NonCanonical);
+	}
+
+	*dest.add(0) = a << 3 | b >> 2;
 
 	Ok(dest.add(1))
 }

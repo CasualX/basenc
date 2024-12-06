@@ -70,7 +70,7 @@ fn cwgem_test_base64_rb() {
 	error("AAA^", &Base64Std, Error::InvalidCharacter);
 	error("AB==", &Base64Std, Error::NonCanonical);
 	error("AAB=", &Base64Std, Error::NonCanonical);
-	
+
 	roundtrip(b"", &Base64Url, "");
 	roundtrip(b"\0", &Base64Url, "AA");
 	roundtrip(b"\0\0", &Base64Url, "AAA");
@@ -84,4 +84,25 @@ fn cwgem_test_base64_rb() {
 #[test]
 fn proptest() {
 	roundtrip("a￼\u{1cd00}ਏΣ".as_bytes(), &Base64Url, "Ye-_vPCctIDgqI_Oow");
+}
+
+fn smash(encoding: &impl Encoding, input_buf: &mut [u8]) {
+	let mut rng = urandom::new();
+
+	for _ in 0..1000 {
+		let len = rng.range(0..input_buf.len());
+		rng.fill_bytes(&mut input_buf[..len]);
+
+		let input = &input_buf[..len];
+		let encoded = encoding.encode_into(input, NoPad, String::new());
+		let decoded = encoding.decode_into(encoded.as_bytes(), NoPad, Vec::new()).unwrap();
+		assert_eq!(input, decoded);
+	}
+}
+
+#[test]
+fn random() {
+	let mut stack_buf = [0u8; 1024];
+	smash(&Base64Std, &mut stack_buf);
+	smash(&Base64Url, &mut stack_buf);
 }

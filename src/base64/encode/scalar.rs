@@ -28,7 +28,7 @@ unsafe fn encode_3bytes([b0, b1, b2]: &[u8; 3], base: &Base64, _pad: Padding, de
 	return dest.add(4);
 }
 
-// aaaaaabb bbbbcccc cc------
+// aaaaaabb bbbbcccc 00------
 #[inline]
 unsafe fn encode_2bytes([b0, b1]: &[u8; 2], base: &Base64, pad: Padding, dest: *mut u8) -> *mut u8 {
 	*dest.add(0) = base.charset[(b0 >> 2) as usize];
@@ -44,7 +44,7 @@ unsafe fn encode_2bytes([b0, b1]: &[u8; 2], base: &Base64, pad: Padding, dest: *
 	}
 }
 
-// aaaaaabb bbbbbb-- --------
+// aaaaaabb 0000---- --------
 #[inline]
 unsafe fn encode_1byte([b0]: &[u8; 1], base: &Base64, pad: Padding, dest: *mut u8) -> *mut u8 {
 	*dest.add(0) = base.charset[(b0 >> 2) as usize];

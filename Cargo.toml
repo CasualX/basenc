@@ -1,6 +1,6 @@
 [package]
 name = "basenc"
-version = "0.2.0"
+version = "0.2.1"
 authors = ["Casper <CasualX@users.noreply.github.com>"]
 edition = "2021"
 
@@ -26,4 +26,5 @@ simd-runtime = [] # Enable SIMD optimizations at runtime
 cfg-if = "1.0"
 
 [dev-dependencies]
+urandom = "0.1"
 simple-base64 = "0.23"

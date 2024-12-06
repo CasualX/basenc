@@ -1,5 +1,6 @@
 use super::*;
 
+// aaaaabbb bbcccccd ddddeeee efffffgg ggghhhhh
 #[inline]
 unsafe fn encode_5bytes([b0, b1, b2, b3, b4]: &[u8; 5], base: &Base32, _pad: Padding, dest: *mut u8) -> *mut u8 {
 	*dest.add(0) = base.charset[(b0 >> 3) as usize];
@@ -14,6 +15,7 @@ unsafe fn encode_5bytes([b0, b1, b2, b3, b4]: &[u8; 5], base: &Base32, _pad: Pad
 	return dest.add(8);
 }
 
+// aaaaabbb bbcccccd ddddeeee efffffgg 000-----
 #[inline]
 unsafe fn encode_4bytes([b0, b1, b2, b3]: &[u8; 4], base: &Base32, pad: Padding, dest: *mut u8) -> *mut u8 {
 	*dest.add(0) = base.charset[(b0 >> 3) as usize];
@@ -33,6 +35,7 @@ unsafe fn encode_4bytes([b0, b1, b2, b3]: &[u8; 4], base: &Base32, pad: Padding,
 	}
 }
 
+// aaaaabbb bbcccccd ddddeeee 0------- --------
 #[inline]
 unsafe fn encode_3bytes([b0, b1, b2]: &[u8; 3], base: &Base32, pad: Padding, dest: *mut u8) -> *mut u8 {
 	*dest.add(0) = base.charset[(b0 >> 3) as usize];
@@ -52,6 +55,7 @@ unsafe fn encode_3bytes([b0, b1, b2]: &[u8; 3], base: &Base32, pad: Padding, des
 	}
 }
 
+// aaaaabbb bbcccccd 0000---- -------- --------
 #[inline]
 unsafe fn encode_2bytes([b0, b1]: &[u8; 2], base: &Base32, pad: Padding, dest: *mut u8) -> *mut u8 {
 	*dest.add(0) = base.charset[(b0 >> 3) as usize];
@@ -71,6 +75,7 @@ unsafe fn encode_2bytes([b0, b1]: &[u8; 2], base: &Base32, pad: Padding, dest: *
 	}
 }
 
+// aaaaabbb 00------ -------- -------- --------
 #[inline]
 unsafe fn encode_1byte([b0]: &[u8; 1], base: &Base32, pad: Padding, dest: *mut u8) -> *mut u8 {
 	*dest.add(0) = base.charset[(b0 >> 3) as usize];

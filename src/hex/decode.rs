@@ -16,5 +16,6 @@ impl_arch_decode! {
 
 	(any(target_arch = "x86_64", target_arch = "x86")) => {
 		sse2: "sse2" is_x86_feature_detected!("sse2");
+		// avx2: "avx2" is_x86_feature_detected!("avx2");
 	},
 }

@@ -26,3 +26,24 @@ fn stuff() {
 	assert_eq!(LowerHex.decode_into("5ACfFda7cA3e373D4a11", &mut [0u8; 16]), Ok(bytes));
 	assert_eq!(UpperHex.decode_into("5acFfDA7Ca3E373d4A11", &mut [0u8; 16]), Ok(bytes));
 }
+
+fn smash(encoding: &impl Encoding, input_buf: &mut [u8]) {
+	let mut rng = urandom::new();
+
+	for _ in 0..1000 {
+		let len = rng.range(0..input_buf.len());
+		rng.fill_bytes(&mut input_buf[..len]);
+
+		let input = &input_buf[..len];
+		let encoded = encoding.encode_into(input, NoPad, String::new());
+		let decoded = encoding.decode_into(encoded.as_bytes(), NoPad, Vec::new()).unwrap();
+		assert_eq!(input, decoded);
+	}
+}
+
+#[test]
+fn random() {
+	let mut stack_buf = [0u8; 1024];
+	smash(&LowerHex, &mut stack_buf);
+	smash(&UpperHex, &mut stack_buf);
+}
