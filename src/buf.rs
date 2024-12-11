@@ -61,6 +61,20 @@ impl<'a, const N: usize> DecodeBuf for &'a mut mem::MaybeUninit<[u8; N]> {
 	}
 }
 
+impl<'a, const N: usize> DecodeBuf for &'a mut [mem::MaybeUninit<u8>; N] {
+	type Output = &'a [u8];
+	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
+		if len > N {
+			buffer_too_small();
+		}
+		self.as_mut_ptr() as *mut u8
+	}
+	unsafe fn commit(self, len: usize) -> Self::Output {
+		debug_assert!(len <= N);
+		slice::from_raw_parts(self.as_ptr() as *const u8, len)
+	}
+}
+
 impl<'a, const N: usize> DecodeBuf for &'a mut [u8; N] {
 	type Output = &'a [u8];
 	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
@@ -72,6 +86,20 @@ impl<'a, const N: usize> DecodeBuf for &'a mut [u8; N] {
 	unsafe fn commit(self, len: usize) -> Self::Output {
 		debug_assert!(len <= N);
 		slice::from_raw_parts(self.as_ptr(), len)
+	}
+}
+
+impl<'a> DecodeBuf for &'a mut [mem::MaybeUninit<u8>] {
+	type Output = &'a [u8];
+	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
+		if len > self.len() {
+			buffer_too_small();
+		}
+		self.as_mut_ptr() as *mut u8
+	}
+	unsafe fn commit(self, len: usize) -> Self::Output {
+		debug_assert!(len <= self.len());
+		slice::from_raw_parts(self.as_ptr() as *const u8, len)
 	}
 }
 
@@ -177,6 +205,21 @@ impl<'a, const N: usize> EncodeBuf for &'a mut mem::MaybeUninit<[u8; N]> {
 	}
 }
 
+impl<'a, const N: usize> EncodeBuf for &'a mut [mem::MaybeUninit<u8>; N] {
+	type Output = &'a str;
+	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
+		if len > N {
+			buffer_too_small();
+		}
+		self.as_mut_ptr() as *mut u8
+	}
+	unsafe fn commit(self, len: usize) -> Self::Output {
+		debug_assert!(len <= N);
+		let bytes = slice::from_raw_parts(self.as_ptr() as *const u8, len);
+		str::from_utf8_unchecked(bytes)
+	}
+}
+
 impl<'a, const N: usize> EncodeBuf for &'a mut [u8; N] {
 	type Output = &'a str;
 	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
@@ -188,6 +231,21 @@ impl<'a, const N: usize> EncodeBuf for &'a mut [u8; N] {
 	unsafe fn commit(self, len: usize) -> Self::Output {
 		debug_assert!(len <= N);
 		let bytes = slice::from_raw_parts(self.as_ptr(), len);
+		str::from_utf8_unchecked(bytes)
+	}
+}
+
+impl<'a> EncodeBuf for &'a mut [mem::MaybeUninit<u8>] {
+	type Output = &'a str;
+	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
+		if len > self.len() {
+			buffer_too_small();
+		}
+		self.as_mut_ptr() as *mut u8
+	}
+	unsafe fn commit(self, len: usize) -> Self::Output {
+		debug_assert!(len <= self.len());
+		let bytes = slice::from_raw_parts(self.as_ptr() as *const u8, len);
 		str::from_utf8_unchecked(bytes)
 	}
 }
