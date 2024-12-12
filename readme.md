@@ -16,14 +16,14 @@ Examples
 Encoding:
 
 ```rust
-let encoded = basenc::Base64Std.encode(b"hello world", basenc::Padding::Optional);
+let encoded = basenc::Base64Std.encode(b"hello world");
 assert_eq!(encoded, "aGVsbG8gd29ybGQ");
 ```
 
 Decoding:
 
 ```rust
-let decoded = basenc::Base64Std.decode("aGVsbG8gd29ybGQ=", basenc::Padding::Optional).unwrap();
+let decoded = basenc::Base64Std.decode("aGVsbG8gd29ybGQ=").unwrap();
 assert_eq!(decoded, b"hello world");
 ```
 

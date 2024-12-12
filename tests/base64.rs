@@ -2,14 +2,14 @@ use basenc::*;
 
 #[track_caller]
 fn roundtrip(input: &[u8], encoding: &impl Encoding, expected: &str) {
-	assert_eq!(expected.trim_end_matches("="), encoding.encode_into(input, Padding::Optional, String::new()));
-	assert_eq!(Ok(input), encoding.decode_into(expected.as_bytes(), Padding::Optional, Vec::new()).as_deref());
+	assert_eq!(expected.trim_end_matches("="), encoding.encode_into(input, String::new()));
+	assert_eq!(Ok(input), encoding.decode_into(expected.as_bytes(), Vec::new()).as_deref());
 }
 
 #[track_caller]
 fn error(string: &str, enc: &impl crate::Encoding, err: Error) {
 	let mut buf = [0u8; 64];
-	assert_eq!(enc.decode_into(string.as_bytes(), Padding::Strict, &mut buf), Err(err));
+	assert_eq!(enc.decode_into(string.as_bytes(), &mut buf), Err(err));
 }
 
 #[test]
@@ -59,17 +59,18 @@ fn cwgem_test_base64_rb() {
 	roundtrip(b"\xFF\xFF\xFF", &Base64Std, "////");
 	roundtrip(b"\xff\xef", &Base64Std, "/+8=");
 
-	error("^", &Base64Std, Error::IncorrectLength);
-	error("A", &Base64Std, Error::IncorrectLength);
-	error("A^", &Base64Std, Error::IncorrectLength);
-	error("AA", &Base64Std, Error::IncorrectLength);
-	error("AA=", &Base64Std, Error::IncorrectLength);
-	error("AA===", &Base64Std, Error::IncorrectLength);
-	error("AA=x", &Base64Std, Error::InvalidCharacter);
-	error("AAA", &Base64Std, Error::IncorrectLength);
-	error("AAA^", &Base64Std, Error::InvalidCharacter);
-	error("AB==", &Base64Std, Error::NonCanonical);
-	error("AAB=", &Base64Std, Error::NonCanonical);
+	let base64std_strict = Base64Std.pad(Padding::Strict);
+	error("^", &base64std_strict, Error::IncorrectLength);
+	error("A", &base64std_strict, Error::IncorrectLength);
+	error("A^", &base64std_strict, Error::IncorrectLength);
+	error("AA", &base64std_strict, Error::IncorrectLength);
+	error("AA=", &base64std_strict, Error::IncorrectLength);
+	error("AA===", &base64std_strict, Error::IncorrectLength);
+	error("AA=x", &base64std_strict, Error::InvalidCharacter);
+	error("AAA", &base64std_strict, Error::IncorrectLength);
+	error("AAA^", &base64std_strict, Error::InvalidCharacter);
+	error("AB==", &base64std_strict, Error::NonCanonical);
+	error("AAB=", &base64std_strict, Error::NonCanonical);
 
 	roundtrip(b"", &Base64Url, "");
 	roundtrip(b"\0", &Base64Url, "AA");
@@ -94,8 +95,8 @@ fn smash(encoding: &impl Encoding, input_buf: &mut [u8]) {
 		rng.fill_bytes(&mut input_buf[..len]);
 
 		let input = &input_buf[..len];
-		let encoded = encoding.encode_into(input, NoPad, String::new());
-		let decoded = encoding.decode_into(encoded.as_bytes(), NoPad, Vec::new()).unwrap();
+		let encoded = encoding.encode_into(input, String::new());
+		let decoded = encoding.decode_into(encoded.as_bytes(), Vec::new()).unwrap();
 		assert_eq!(input, decoded);
 	}
 }
@@ -103,6 +104,6 @@ fn smash(encoding: &impl Encoding, input_buf: &mut [u8]) {
 #[test]
 fn random() {
 	let mut stack_buf = [0u8; 1024];
-	smash(&Base64Std, &mut stack_buf);
-	smash(&Base64Url, &mut stack_buf);
+	smash(&Base64Std.pad(NoPad), &mut stack_buf);
+	smash(&Base64Url.pad(NoPad), &mut stack_buf);
 }

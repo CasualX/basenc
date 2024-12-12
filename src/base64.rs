@@ -81,46 +81,65 @@ impl Base64 {
 		charset[63] = char63;
 		Base64::from_charset(&charset)
 	}
+
+	/// With explicit padding policy.
+	pub const fn pad(&self, pad: Padding) -> WithPad<Self> {
+		WithPad { encoding: self, pad }
+	}
 }
 
 impl Encoding for Base64 {
 	const RATIO: Ratio = RATIO;
 
 	#[inline]
-	fn encode_into<B: EncodeBuf>(&self, bytes: &[u8], pad: Padding, buffer: B) -> B::Output {
-		encode(bytes, self, pad, buffer)
+	fn encode_into<B: EncodeBuf>(&self, bytes: &[u8], buffer: B) -> B::Output {
+		encode(bytes, self, Padding::Optional, buffer)
 	}
 
 	#[inline]
-	fn decode_into<B: DecodeBuf>(&self, string: &[u8], pad: Padding, buffer: B) -> Result<B::Output, Error> {
-		decode(string, self, pad, buffer)
+	fn decode_into<B: DecodeBuf>(&self, string: &[u8], buffer: B) -> Result<B::Output, Error> {
+		decode(string, self, Padding::Optional, buffer)
+	}
+}
+
+impl Encoding for WithPad<'_, Base64> {
+	const RATIO: Ratio = RATIO;
+
+	#[inline]
+	fn encode_into<B: EncodeBuf>(&self, bytes: &[u8], buffer: B) -> B::Output {
+		encode(bytes, self.encoding, self.pad, buffer)
+	}
+
+	#[inline]
+	fn decode_into<B: DecodeBuf>(&self, string: &[u8], buffer: B) -> Result<B::Output, Error> {
+		decode(string, self.encoding, self.pad, buffer)
 	}
 }
 
 impl_encoding!(Base64,
 	encode: [
 		"```",
-		"let encoded = basenc::Base64Std.encode(b\"hello world\", basenc::Padding::Optional);",
+		"let encoded = basenc::Base64Std.encode(b\"hello world\");",
 		"assert_eq!(encoded, \"aGVsbG8gd29ybGQ\");",
 		"```",
 	],
 	decode: [
 		"```",
-		"let decoded = basenc::Base64Std.decode(\"aGVsbG8gd29ybGQ=\", basenc::Padding::Optional).unwrap();",
+		"let decoded = basenc::Base64Std.decode(\"aGVsbG8gd29ybGQ=\").unwrap();",
 		"assert_eq!(decoded, b\"hello world\");",
 		"```",
 	],
 	encode_into: [
 		"```",
 		"let mut stack_buf = [0u8; 16];",
-		"let encoded = basenc::Base64Std.encode_into(b\"hello world\", basenc::Padding::Optional, &mut stack_buf);",
+		"let encoded = basenc::Base64Std.encode_into(b\"hello world\", &mut stack_buf);",
 		"assert_eq!(encoded, \"aGVsbG8gd29ybGQ\");",
 		"```",
 	],
 	decode_into: [
 		"```",
 		"let mut buffer = vec![0x11, 0x22, 0x33];",
-		"let decoded = basenc::Base64Url.decode_into(\"QnVGZkVyIFJlVXNFIQ\", basenc::Padding::Optional, &mut buffer).unwrap();",
+		"let decoded = basenc::Base64Url.decode_into(\"QnVGZkVyIFJlVXNFIQ\", &mut buffer).unwrap();",
 		"assert_eq!(decoded, b\"BuFfEr ReUsE!\");",
 		"assert_eq!(buffer, b\"\\x11\\x22\\x33BuFfEr ReUsE!\");",
 		"```",

@@ -34,19 +34,38 @@ impl Base32 {
 		}
 		Base32 { charset, lut }
 	}
+
+	/// With explicit padding policy.
+	pub const fn pad(&self, pad: Padding) -> WithPad<Self> {
+		WithPad { encoding: self, pad }
+	}
 }
 
 impl Encoding for Base32 {
 	const RATIO: Ratio = RATIO;
 
 	#[inline]
-	fn encode_into<B: EncodeBuf>(&self, bytes: &[u8], pad: Padding, buffer: B) -> B::Output {
-		encode(bytes, self, pad, buffer)
+	fn encode_into<B: EncodeBuf>(&self, bytes: &[u8], buffer: B) -> B::Output {
+		encode(bytes, self, Padding::Optional, buffer)
 	}
 
 	#[inline]
-	fn decode_into<B: DecodeBuf>(&self, string: &[u8], pad: Padding, buffer: B) -> Result<B::Output, Error> {
-		decode(string, self, pad, buffer)
+	fn decode_into<B: DecodeBuf>(&self, string: &[u8], buffer: B) -> Result<B::Output, Error> {
+		decode(string, self, Padding::Optional, buffer)
+	}
+}
+
+impl Encoding for WithPad<'_, Base32> {
+	const RATIO: Ratio = RATIO;
+
+	#[inline]
+	fn encode_into<B: EncodeBuf>(&self, bytes: &[u8], buffer: B) -> B::Output {
+		encode(bytes, self.encoding, self.pad, buffer)
+	}
+
+	#[inline]
+	fn decode_into<B: DecodeBuf>(&self, string: &[u8], buffer: B) -> Result<B::Output, Error> {
+		decode(string, self.encoding, self.pad, buffer)
 	}
 }
 

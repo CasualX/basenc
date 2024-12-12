@@ -12,17 +12,17 @@ impl Encoding for LowerHex {
 	const RATIO: Ratio = RATIO;
 
 	#[inline]
-	fn encode_into<B: EncodeBuf>(&self, bytes: &[u8], _pad: Padding, buffer: B) -> B::Output {
+	fn encode_into<B: EncodeBuf>(&self, bytes: &[u8], buffer: B) -> B::Output {
 		encode(bytes, b'a', buffer)
 	}
 
 	#[inline]
-	fn decode_into<B: DecodeBuf>(&self, string: &[u8], _pad: Padding, buffer: B) -> Result<B::Output, Error> {
+	fn decode_into<B: DecodeBuf>(&self, string: &[u8], buffer: B) -> Result<B::Output, Error> {
 		decode(string, buffer)
 	}
 }
 
-impl_encoding_no_pad!(LowerHex,
+impl_encoding!(LowerHex,
 	encode: [
 		"```",
 		"let encoded = basenc::LowerHex.encode(b\"\\x00\\x80\\xFF\\xDC\");",
@@ -61,17 +61,17 @@ impl Encoding for UpperHex {
 	const RATIO: Ratio = RATIO;
 
 	#[inline]
-	fn encode_into<B: EncodeBuf>(&self, bytes: &[u8], _pad: Padding, buffer: B) -> B::Output {
+	fn encode_into<B: EncodeBuf>(&self, bytes: &[u8], buffer: B) -> B::Output {
 		encode(bytes, b'A', buffer)
 	}
 
 	#[inline]
-	fn decode_into<B: DecodeBuf>(&self, string: &[u8], _pad: Padding, buffer: B) -> Result<B::Output, Error> {
+	fn decode_into<B: DecodeBuf>(&self, string: &[u8], buffer: B) -> Result<B::Output, Error> {
 		decode(string, buffer)
 	}
 }
 
-impl_encoding_no_pad!(UpperHex,
+impl_encoding!(UpperHex,
 	encode: [
 		"```",
 		"let encoded = basenc::UpperHex.encode(b\"\\x00\\x80\\xFF\\xDC\");",

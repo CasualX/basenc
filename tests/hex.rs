@@ -2,8 +2,8 @@ use basenc::*;
 
 #[track_caller]
 fn roundtrip(input: &[u8], encoding: &impl Encoding, expected: &str) {
-	assert_eq!(expected, encoding.encode_into(input, NoPad, String::new()));
-	assert_eq!(Ok(input), encoding.decode_into(expected.as_bytes(), NoPad, Vec::new()).as_deref());
+	assert_eq!(expected, encoding.encode_into(input, String::new()));
+	assert_eq!(Ok(input), encoding.decode_into(expected.as_bytes(), Vec::new()).as_deref());
 }
 
 #[test]
@@ -35,8 +35,8 @@ fn smash(encoding: &impl Encoding, input_buf: &mut [u8]) {
 		rng.fill_bytes(&mut input_buf[..len]);
 
 		let input = &input_buf[..len];
-		let encoded = encoding.encode_into(input, NoPad, String::new());
-		let decoded = encoding.decode_into(encoded.as_bytes(), NoPad, Vec::new()).unwrap();
+		let encoded = encoding.encode_into(input, String::new());
+		let decoded = encoding.decode_into(encoded.as_bytes(), Vec::new()).unwrap();
 		assert_eq!(input, decoded);
 	}
 }

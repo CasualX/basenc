@@ -10,14 +10,14 @@ Examples
 Encoding:
 
 ```
-let encoded = basenc::Base64Std.encode(b"hello world", basenc::Padding::Optional);
+let encoded = basenc::Base64Std.encode(b"hello world");
 assert_eq!(encoded, "aGVsbG8gd29ybGQ");
 ```
 
 Decoding:
 
 ```
-let decoded = basenc::Base64Std.decode("aGVsbG8gd29ybGQ=", basenc::Padding::Optional).unwrap();
+let decoded = basenc::Base64Std.decode("aGVsbG8gd29ybGQ=").unwrap();
 assert_eq!(decoded, b"hello world");
 ```
 
@@ -52,6 +52,10 @@ mod arch;
 
 mod ratio;
 pub use self::ratio::Ratio;
+
+mod pad;
+pub use self::pad::*;
+pub use Padding::None as NoPad;
 
 mod buf;
 pub use self::buf::*;
@@ -100,37 +104,18 @@ impl std::error::Error for Error {}
 
 //----------------------------------------------------------------
 
-/// Padding policy.
-#[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
-pub enum Padding {
-	/// No padding.
-	None,
-	/// Optional padding.
-	///
-	/// Padding accepted while decoding, not added while encoding.
-	#[default]
-	Optional,
-	/// Strict padding.
-	Strict,
-}
-
-pub use self::Padding::None as NoPad;
-
-//----------------------------------------------------------------
-
 /// Display wrapper for encoding.
 #[derive(Clone, Debug)]
 pub struct Display<'a, E> {
 	encoding: &'a E,
 	bytes: &'a [u8],
-	pad: Padding,
 }
 
 impl<'a, E: Encoding> Display<'a, E> {
 	/// Wraps the encoding and bytes for display.
 	#[inline]
-	pub fn new(encoding: &'a E, bytes: &'a [u8], pad: Padding) -> Self {
-		Self { encoding, bytes, pad }
+	pub fn new(encoding: &'a E, bytes: &'a [u8]) -> Self {
+		Self { encoding, bytes }
 	}
 }
 
@@ -140,7 +125,7 @@ impl<'a, E: Encoding> fmt::Display for Display<'a, E> {
 		let chunk_size = E::RATIO.encoding_chunk_size(mem::size_of_val(&stack_buf));
 
 		for chunk in self.bytes.chunks(chunk_size) {
-			let string = self.encoding.encode_into(chunk, self.pad, &mut stack_buf);
+			let string = self.encoding.encode_into(chunk, &mut stack_buf);
 			f.write_str(string)?;
 		}
 
@@ -156,8 +141,8 @@ pub trait Encoding {
 	const RATIO: Ratio;
 
 	/// Encodes into an encoding buffer.
-	fn encode_into<B: EncodeBuf>(&self, bytes: &[u8], pad: Padding, buffer: B) -> B::Output;
+	fn encode_into<B: EncodeBuf>(&self, bytes: &[u8], buffer: B) -> B::Output;
 
 	/// Decodes into a decoding buffer.
-	fn decode_into<B: DecodeBuf>(&self, string: &[u8], pad: Padding, buffer: B) -> Result<B::Output, Error>;
+	fn decode_into<B: DecodeBuf>(&self, string: &[u8], buffer: B) -> Result<B::Output, Error>;
 }

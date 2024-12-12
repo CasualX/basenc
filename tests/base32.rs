@@ -2,26 +2,28 @@ use basenc::*;
 
 #[track_caller]
 fn roundtrip(input: &[u8], encoding: &impl Encoding, expected: &str) {
-	assert_eq!(expected, encoding.encode_into(input, Padding::Strict, String::new()));
-	assert_eq!(Ok(input), encoding.decode_into(expected.as_bytes(), Padding::Strict, Vec::new()).as_deref());
+	assert_eq!(expected, encoding.encode_into(input, String::new()));
+	assert_eq!(Ok(input), encoding.decode_into(expected.as_bytes(), Vec::new()).as_deref());
 }
 
 #[test]
 fn rfc4648() {
-	roundtrip(b"", &Base32Std, "");
-	roundtrip(b"f", &Base32Std, "MY======");
-	roundtrip(b"fo", &Base32Std, "MZXQ====");
-	roundtrip(b"foo", &Base32Std, "MZXW6===");
-	roundtrip(b"foob", &Base32Std, "MZXW6YQ=");
-	roundtrip(b"fooba", &Base32Std, "MZXW6YTB");
-	roundtrip(b"foobar", &Base32Std, "MZXW6YTBOI======");
-	roundtrip(b"", &Base32Hex, "");
-	roundtrip(b"f", &Base32Hex, "CO======");
-	roundtrip(b"fo", &Base32Hex, "CPNG====");
-	roundtrip(b"foo", &Base32Hex, "CPNMU===");
-	roundtrip(b"foob", &Base32Hex, "CPNMUOG=");
-	roundtrip(b"fooba", &Base32Hex, "CPNMUOJ1");
-	roundtrip(b"foobar", &Base32Hex, "CPNMUOJ1E8======");
+	let base32std = Base32Std.pad(Padding::Strict);
+	roundtrip(b"", &base32std, "");
+	roundtrip(b"f", &base32std, "MY======");
+	roundtrip(b"fo", &base32std, "MZXQ====");
+	roundtrip(b"foo", &base32std, "MZXW6===");
+	roundtrip(b"foob", &base32std, "MZXW6YQ=");
+	roundtrip(b"fooba", &base32std, "MZXW6YTB");
+	roundtrip(b"foobar", &base32std, "MZXW6YTBOI======");
+	let base32hex = Base32Hex.pad(Padding::Strict);
+	roundtrip(b"", &base32hex, "");
+	roundtrip(b"f", &base32hex, "CO======");
+	roundtrip(b"fo", &base32hex, "CPNG====");
+	roundtrip(b"foo", &base32hex, "CPNMU===");
+	roundtrip(b"foob", &base32hex, "CPNMUOG=");
+	roundtrip(b"fooba", &base32hex, "CPNMUOJ1");
+	roundtrip(b"foobar", &base32hex, "CPNMUOJ1E8======");
 }
 
 fn smash(encoding: &impl Encoding, input_buf: &mut [u8]) {
@@ -32,8 +34,8 @@ fn smash(encoding: &impl Encoding, input_buf: &mut [u8]) {
 		rng.fill_bytes(&mut input_buf[..len]);
 
 		let input = &input_buf[..len];
-		let encoded = encoding.encode_into(input, NoPad, String::new());
-		let decoded = encoding.decode_into(encoded.as_bytes(), NoPad, Vec::new()).unwrap();
+		let encoded = encoding.encode_into(input, String::new());
+		let decoded = encoding.decode_into(encoded.as_bytes(), Vec::new()).unwrap();
 		assert_eq!(input, decoded);
 	}
 }
@@ -41,7 +43,7 @@ fn smash(encoding: &impl Encoding, input_buf: &mut [u8]) {
 #[test]
 fn random() {
 	let mut stack_buf = [0u8; 1024];
-	smash(&Base32Std, &mut stack_buf);
-	smash(&Base32Hex, &mut stack_buf);
-	smash(&Base32Z, &mut stack_buf);
+	smash(&Base32Std.pad(NoPad), &mut stack_buf);
+	smash(&Base32Hex.pad(NoPad), &mut stack_buf);
+	smash(&Base32Z.pad(NoPad), &mut stack_buf);
 }

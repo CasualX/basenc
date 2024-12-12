@@ -12,53 +12,53 @@ fn parse_pad(i: i32) -> basenc::Padding {
 proptest! {
 	#[test]
 	fn base64_decode(s in "[a-zA-Z0-9+/]*") {
-		let _ = basenc::Base64Std.decode(&s, basenc::NoPad);
+		let _ = basenc::Base64Std.pad(basenc::NoPad).decode(&s);
 	}
 
 	#[test]
 	fn base64_encode(s in "\\PC*", pad in 0..3) {
-		let pad = parse_pad(pad);
-		let encoded = basenc::Base64Std.encode(&s.as_bytes(), pad);
-		let decoded = basenc::Base64Std.decode(&encoded, pad).unwrap();
+		let encoding = basenc::Base64Std.pad(parse_pad(pad));
+		let encoded = encoding.encode(&s.as_bytes());
+		let decoded = encoding.decode(&encoded).unwrap();
 		assert_eq!(s.as_bytes(), decoded);
 	}
 
 	#[test]
 	fn base64url_decode(s in "[a-zA-Z0-9-_]*") {
-		let _ = basenc::Base64Url.decode(&s, basenc::NoPad);
+		let _ = basenc::Base64Url.pad(basenc::NoPad).decode(&s);
 	}
 
 	#[test]
 	fn base64url_encode(s in "\\PC*", pad in 0..3) {
-		let pad = parse_pad(pad);
-		let encoded = basenc::Base64Url.encode(&s.as_bytes(), pad);
-		let decoded = basenc::Base64Url.decode(&encoded, pad).unwrap();
+		let encoding = basenc::Base64Url.pad(parse_pad(pad));
+		let encoded = encoding.encode(&s.as_bytes());
+		let decoded = encoding.decode(&encoded).unwrap();
 		assert_eq!(s.as_bytes(), decoded);
 	}
 
 	#[test]
 	fn base32_decode(s in "[A-Z2-7]*") {
-		let _ = basenc::Base32Std.decode(&s, basenc::NoPad);
+		let _ = basenc::Base32Std.pad(basenc::NoPad).decode(&s);
 	}
 
 	#[test]
 	fn base32_encode(s in "\\PC*", pad in 0..3) {
-		let pad = parse_pad(pad);
-		let encoded = basenc::Base32Std.encode(&s.as_bytes(), pad);
-		let decoded = basenc::Base32Std.decode(&encoded, pad).unwrap();
+		let encoding = basenc::Base32Std.pad(parse_pad(pad));
+		let encoded = encoding.encode(&s.as_bytes());
+		let decoded = encoding.decode(&encoded).unwrap();
 		assert_eq!(s.as_bytes(), decoded);
 	}
 
 	#[test]
 	fn base32hex_decode(s in "[A-V0-9]*") {
-		let _ = basenc::Base32Hex.decode(&s, basenc::NoPad);
+		let _ = basenc::Base32Hex.pad(basenc::NoPad).decode(&s);
 	}
 
 	#[test]
 	fn base32hex_encode(s in "\\PC*", pad in 0..3) {
-		let pad = parse_pad(pad);
-		let encoded = basenc::Base32Hex.encode(&s.as_bytes(), pad);
-		let decoded = basenc::Base32Hex.decode(&encoded, pad).unwrap();
+		let encoding = basenc::Base32Hex.pad(parse_pad(pad));
+		let encoded = encoding.encode(&s.as_bytes());
+		let decoded = encoding.decode(&encoded).unwrap();
 		assert_eq!(s.as_bytes(), decoded);
 	}
 
