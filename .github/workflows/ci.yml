@@ -6,7 +6,6 @@ on:
   pull_request:
     branches: [ master ]
 
-  # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
 jobs:
@@ -35,9 +34,6 @@ jobs:
         with:
           command: test
 
-      # Run tests again in Release mode to attempt to catch UB
-      - name: Run tests (Release)
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --release
+      - name: Run proptest tests (Release)
+        working-directory: proptest
+        run: cargo test --release

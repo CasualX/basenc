@@ -8,29 +8,41 @@ use core::{mem, slice, str};
 
 /// Byte buffer receiving decoded input.
 ///
+/// # Usage
+///
+/// Calculate the `upper_bound` of memory needed for decoding and pass it with `buffer.allocate(upper_bound)`.
+///
+/// This returns a pointer to uninitialized memory of the requested length. May panic if the buffer is too small.
+///
+/// Write at most `upper_bound` of decoded bytes to this memory and invoke `buffer.commit(len)` where `len` is the actual number of bytes written.
+///
 /// # Implementors
 ///
-/// * `&mut MaybeUninit<[u8; N]>`, `&mut [u8; N]`, `&mut [u8]`: Stack buffers. Panics if the buffer is too small.
+/// Convenience. Appends to the buffer and returns ownership.
+/// - `Vec<u8>`
 ///
-/// * `Vec<u8>`: Convenience. Appends to the buffer.
+/// Efficient buffer reuse. Appends to the buffer.
+/// - `&mut Vec<u8>`
 ///
-/// * `&mut Vec<u8>`: Efficient buffer reuse. Appends to the buffer.
-///
-/// # Examples
-///
-/// Start by calculating the `upper_bound` of memory needed for decoding and `buffer.allocate(upper_bound)` it.
-///
-/// Write at most `upper_bound` of decoded bytes to this memory and `buffer.commit(len)` where `len` is the actual number of bytes written.
+/// Stack buffers. Panics if the buffer is too small.
+/// - `&mut [u8]`
+/// - `&mut [u8; N]`
+/// - `&mut [MaybeUninit<u8>]`
+/// - `&mut [MaybeUninit<u8>; N]`
+/// - `&mut MaybeUninit<[u8; N]>`
 pub trait DecodeBuf {
 	type Output;
 
-	/// Returns uninitialized memory of the requested length.
+	/// Returns a non-null pointer to uninitialized memory valid for writes up to `len` bytes.
 	///
 	/// Increases the underlying buffer's capacity and returns those extra bytes without touching the buffer length.
 	///
 	/// # Safety
 	///
-	/// The returned memory is logically uninitialized.
+	/// * The returned pointer from `allocate(len)` must be non-null, and valid for writes of exactly `len` bytes.
+	/// * The allocated memory is logically uninitialized and must not be read before being written.
+	/// * The memory must remain valid until `commit` is called.
+	/// * No other access to the buffer may occur between `allocate` and `commit`.
 	unsafe fn allocate(&mut self, len: usize) -> *mut u8;
 
 	/// Commits `len` bytes previously allocated.
@@ -41,9 +53,8 @@ pub trait DecodeBuf {
 	///
 	/// # Safety
 	///
-	/// The committed `len` must be less than or equal to the earlier allocated `len`.
-	///
-	/// The buffer must not be touched in between calling `allocate` and `commit`.
+	/// * The length passed to `commit` must be less than or equal to the length passed to `allocate`.
+	/// * No other access to the buffer may occur between `allocate` and `commit`.
 	unsafe fn commit(self, len: usize) -> Self::Output;
 }
 
@@ -122,7 +133,7 @@ impl DecodeBuf for ::std::vec::Vec<u8> {
 	type Output = ::std::vec::Vec<u8>;
 	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
 		self.reserve(len);
-		self.as_mut_ptr().offset(self.len() as isize)
+		self.as_mut_ptr().add(self.len())
 	}
 	unsafe fn commit(mut self, len: usize) -> Self::Output {
 		let new_len = self.len() + len;
@@ -136,12 +147,12 @@ impl<'a> DecodeBuf for &'a mut ::std::vec::Vec<u8> {
 	type Output = &'a [u8];
 	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
 		self.reserve(len);
-		self.as_mut_ptr().offset(self.len() as isize)
+		self.as_mut_ptr().add(self.len())
 	}
 	unsafe fn commit(self, len: usize) -> Self::Output {
 		let start = self.len();
 		self.set_len(start + len);
-		slice::from_raw_parts(self.as_ptr().offset(start as isize), len)
+		slice::from_raw_parts(self.as_ptr().add(start), len)
 	}
 }
 
@@ -149,29 +160,42 @@ impl<'a> DecodeBuf for &'a mut ::std::vec::Vec<u8> {
 
 /// String buffer receiving encoded input.
 ///
+/// # Usage
+///
+/// Calculate the `upper_bound` of memory needed for encoding and pass it with `buffer.allocate(upper_bound)`.
+///
+/// This returns a pointer to uninitialized memory of the requested length. May panic if the buffer is too small.
+///
+/// Write at most `upper_bound` of valid UTF-8 bytes to this memory and invoke `buffer.commit(len)` where `len` is the actual number of UTF-8 bytes written.
+///
 /// # Implementors
 ///
-/// * `&mut MaybeUninit<[u8; N]>`, `&mut [u8; N]`, `&mut [u8]`: Stack buffers. Panics if the buffer is too small.
+/// Convenience. Appends to the buffer and returns ownership.
+/// - `String`
 ///
-/// * `String`: Convenience. Appends to the buffer.
+/// Efficient buffer reuse. Appends to the buffer.
+/// - `&mut String`
+/// - `&mut Vec<u8>`
 ///
-/// * `&mut String`, `&mut Vec<u8>`: Efficient buffer reuse. Appends to the buffer.
-///
-/// # Examples
-///
-/// Start by calculating the `upper_bound` of memory needed for encoding and `buffer.allocate(upper_bound)` it.
-///
-/// Write at most `upper_bound` of valid utf-8 bytes to this memory and `buffer.commit(len)` where `len` is the actual number of utf-8 bytes written.
+/// Stack buffers. Panics if the buffer is too small.
+/// - `&mut [u8]`
+/// - `&mut [u8; N]`
+/// - `&mut [MaybeUninit<u8>]`
+/// - `&mut [MaybeUninit<u8>; N]`
+/// - `&mut MaybeUninit<[u8; N]>`
 pub trait EncodeBuf {
 	type Output;
 
-	/// Returns uninitialized memory of the requested length.
+	/// Returns a non-null pointer to uninitialized memory valid for writes up to `len` bytes.
 	///
 	/// Increases the underlying buffer's capacity and returns those extra bytes without touching the buffer length.
 	///
 	/// # Safety
 	///
-	/// The returned memory is logically uninitialized.
+	/// * The returned pointer from `allocate(len)` must be non-null, and valid for writes of exactly `len` bytes.
+	/// * The allocated memory is logically uninitialized and must not be read before being written.
+	/// * The memory must remain valid until `commit` is called.
+	/// * No other access to the buffer may occur between `allocate` and `commit`.
 	unsafe fn allocate(&mut self, len: usize) -> *mut u8;
 
 	/// Commits `len` bytes previously allocated.
@@ -182,11 +206,9 @@ pub trait EncodeBuf {
 	///
 	/// # Safety
 	///
-	/// The committed `len` must be less than or equal to the earlier allocated `len`.
-	///
-	/// The bytes written must be valid utf-8.
-	///
-	/// The buffer must not be touched in between calling `allocate` and `commit`.
+	/// * The length passed to `commit` must be less than or equal to the length passed to `allocate`.
+	/// * The caller must write only valid UTF-8 to the returned memory.
+	/// * No other access to the buffer may occur between `allocate` and `commit`.
 	unsafe fn commit(self, len: usize) -> Self::Output;
 }
 
@@ -271,7 +293,7 @@ impl EncodeBuf for ::std::string::String {
 	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
 		let vec = self.as_mut_vec();
 		vec.reserve(len);
-		vec.as_mut_ptr().offset(vec.len() as isize)
+		vec.as_mut_ptr().add(vec.len())
 	}
 	unsafe fn commit(mut self, len: usize) -> Self::Output {
 		{
@@ -289,13 +311,13 @@ impl<'a> EncodeBuf for &'a mut ::std::string::String {
 	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
 		let vec = self.as_mut_vec();
 		vec.reserve(len);
-		vec.as_mut_ptr().offset(vec.len() as isize)
+		vec.as_mut_ptr().add(vec.len())
 	}
 	unsafe fn commit(self, len: usize) -> Self::Output {
 		let vec = self.as_mut_vec();
 		let start = vec.len();
 		vec.set_len(start + len);
-		let bytes = slice::from_raw_parts(vec.as_ptr().offset(start as isize), len);
+		let bytes = slice::from_raw_parts(vec.as_ptr().add(start), len);
 		str::from_utf8_unchecked(bytes)
 	}
 }
@@ -305,12 +327,12 @@ impl<'a> EncodeBuf for &'a mut ::std::vec::Vec<u8> {
 	type Output = &'a str;
 	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
 		self.reserve(len);
-		self.as_mut_ptr().offset(self.len() as isize)
+		self.as_mut_ptr().add(self.len())
 	}
 	unsafe fn commit(self, len: usize) -> Self::Output {
 		let start = self.len();
 		self.set_len(start + len);
-		let bytes = slice::from_raw_parts(self.as_ptr().offset(start as isize), len);
+		let bytes = slice::from_raw_parts(self.as_ptr().add(start), len);
 		str::from_utf8_unchecked(bytes)
 	}
 }

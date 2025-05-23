@@ -6,12 +6,20 @@ BaseNC
 [![docs.rs](https://docs.rs/basenc/badge.svg)](https://docs.rs/basenc)
 [![Build status](https://github.com/CasualX/basenc/workflows/CI/badge.svg)](https://github.com/CasualX/basenc/actions)
 
-Pronounced "Base-En-See".
+Pronounced **"Base-En-See"**.
 
-Encoding and decoding hex, base64 and base32 with support for `#[no_std]`.
+Encoding and decoding **hex**, **base64** and **base32** with support for #[no_std].
 
-Examples
---------
+🌟 Why BaseNC?
+--------------
+
+* ⚡ Optimized performance – SIMD-accelerated algorithms for blazing-fast encoding/decoding.
+* 📦 Zero dependencies – Lightweight and reliable, no extra baggage.
+* 🦀 Simple, ergonomic API – Encode/decode in just a few lines of code.
+* 🔧 #[no_std] support – Works seamlessly in embedded and constrained environments.
+
+🚀 Examples
+-----------
 
 Encoding:
 
@@ -29,23 +37,16 @@ assert_eq!(decoded, b"hello world");
 
 ### Features
 
-* `std` (default) - Enable support for the standard library. This enables convenience features to encode and decode to `String` and `Vec<u8>` buffers.
+* `std` (default) - Enable support for the standard library, including convenient encoding/decoding to `String` and `Vec<u8>`.
 
-* `simd-off` - Disable SIMD acceleration. The SIMD codepaths are less tested and are more likely to contain bugs.
+* `simd-off` - Disable SIMD acceleration. (The SIMD paths are less tested and may contain bugs.)
 
-* `simd-runtime` - Enable runtime detection of SIMD support. This is enabled by default and will automatically use SIMD acceleration if available.
+* `simd-runtime` - Enable runtime detection of SIMD support. This is **on by default**, and will automatically use SIMD acceleration when available.
 
-Build with `RUSTFLAGS="-C target-cpu=native"` (bash) / `set RUSTFLAGS=-C target-cpu=native` (cmd) to enable compiletime detection of SIMD capabilities.
+Tip: Build with `RUSTFLAGS="-C target-cpu=native"` (bash) or `set RUSTFLAGS=-C target-cpu=native` (cmd) to **enable compiletime detection**.
 
-Future work
------------
-
-Profile and optimize for performance.
-
-Implement SIMD accelerated algorithms for encoding and decoding.
-
-License
--------
+📜 License
+----------
 
 Licensed under [MIT License](https://opensource.org/licenses/MIT), see [license.txt](license.txt).
 

@@ -83,7 +83,7 @@ impl Base64 {
 	}
 
 	/// With explicit padding policy.
-	pub const fn pad(&self, pad: Padding) -> WithPad<Self> {
+	pub const fn pad(&self, pad: Padding) -> WithPad<'_, Self> {
 		WithPad { encoding: self, pad }
 	}
 }

@@ -2,7 +2,9 @@
 BaseNC
 ======
 
-Encoding and decoding of Base-N encodings, `#[no_std]` compatible.
+Pronounced **"Base-En-See"**.
+
+Encoding and decoding **hex**, **base64** and **base32** with support for #\[no_std\].
 
 Examples
 --------
