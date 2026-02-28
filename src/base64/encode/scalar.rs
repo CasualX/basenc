@@ -61,6 +61,11 @@ unsafe fn encode_1byte([b0]: &[u8; 1], base: &Base64, pad: Padding, dest: *mut u
 }
 
 pub unsafe fn encode(mut bytes: &[u8], base: &Base64, pad: Padding, mut dest: *mut u8) -> *mut u8 {
+	// Read 4 bytes at a time as a big-endian u32, but only consume 3 bytes per iteration.
+	// This lets `encode_word` extract four 6-bit groups via simple shifts on the upper 24 bits
+	// (bits 26..31, 20..25, 14..19, 8..13) without manually packing 3 separate bytes.
+	// The lowest 8 bits (the 4th byte) are ignored and will be re-read in the next iteration.
+	// Requires len >= 4 so the u32 read doesn't go out of bounds.
 	while bytes.len() >= 4 {
 		let word = (bytes.as_ptr() as *const u32).read_unaligned();
 		#[cfg(target_endian = "little")]
