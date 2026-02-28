@@ -15,17 +15,17 @@ macro_rules! impl_arch_decode {
 				}
 			}
 			else if #[cfg(feature = "simd-runtime")] {
-				static mut DECODE: Option<$signature> = None;
+				static DECODE: core::sync::atomic::AtomicPtr<()> = core::sync::atomic::AtomicPtr::new(core::ptr::null_mut());
 
 				#[inline]
 				pub fn decode_fn() -> $signature {
-					unsafe {
-						DECODE.unwrap_or_else(|| {
-							let decode = decode_detect();
-							DECODE = Some(decode);
-							decode
-						})
+					let ptr = DECODE.load(core::sync::atomic::Ordering::Relaxed);
+					if !ptr.is_null() {
+						return unsafe { core::mem::transmute(ptr) };
 					}
+					let decode = decode_detect();
+					DECODE.store(decode as *mut (), core::sync::atomic::Ordering::Relaxed);
+					decode
 				}
 
 				cfg_if::cfg_if! {
@@ -93,17 +93,17 @@ macro_rules! impl_arch_encode {
 				}
 			}
 			else if #[cfg(feature = "simd-runtime")] {
-				static mut ENCODE: Option<$signature> = None;
+				static ENCODE: core::sync::atomic::AtomicPtr<()> = core::sync::atomic::AtomicPtr::new(core::ptr::null_mut());
 
 				#[inline]
 				pub fn encode_fn() -> $signature {
-					unsafe {
-						ENCODE.unwrap_or_else(|| {
-							let encode = encode_detect();
-							ENCODE = Some(encode);
-							encode
-						})
+					let ptr = ENCODE.load(core::sync::atomic::Ordering::Relaxed);
+					if !ptr.is_null() {
+						return unsafe { core::mem::transmute(ptr) };
 					}
+					let encode = encode_detect();
+					ENCODE.store(encode as *mut (), core::sync::atomic::Ordering::Relaxed);
+					encode
 				}
 
 				cfg_if::cfg_if! {
