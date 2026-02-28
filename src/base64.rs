@@ -118,31 +118,31 @@ impl Encoding for WithPad<'_, Base64> {
 
 impl_encoding!(Base64,
 	encode: [
-		"```",
-		"let encoded = basenc::Base64Std.encode(b\"hello world\");",
-		"assert_eq!(encoded, \"aGVsbG8gd29ybGQ\");",
-		"```",
+		/// ```
+		/// let encoded = basenc::Base64Std.encode(b"hello world");
+		/// assert_eq!(encoded, "aGVsbG8gd29ybGQ");
+		/// ```
 	],
 	decode: [
-		"```",
-		"let decoded = basenc::Base64Std.decode(\"aGVsbG8gd29ybGQ=\").unwrap();",
-		"assert_eq!(decoded, b\"hello world\");",
-		"```",
+		/// ```
+		/// let decoded = basenc::Base64Std.decode("aGVsbG8gd29ybGQ=").unwrap();
+		/// assert_eq!(decoded, b"hello world");
+		/// ```
 	],
 	encode_into: [
-		"```",
-		"let mut stack_buf = [0u8; 16];",
-		"let encoded = basenc::Base64Std.encode_into(b\"hello world\", &mut stack_buf);",
-		"assert_eq!(encoded, \"aGVsbG8gd29ybGQ\");",
-		"```",
+		/// ```
+		/// let mut stack_buf = [0u8; 16];
+		/// let encoded = basenc::Base64Std.encode_into(b"hello world", &mut stack_buf);
+		/// assert_eq!(encoded, "aGVsbG8gd29ybGQ");
+		/// ```
 	],
 	decode_into: [
-		"```",
-		"let mut buffer = vec![0x11, 0x22, 0x33];",
-		"let decoded = basenc::Base64Url.decode_into(\"QnVGZkVyIFJlVXNFIQ\", &mut buffer).unwrap();",
-		"assert_eq!(decoded, b\"BuFfEr ReUsE!\");",
-		"assert_eq!(buffer, b\"\\x11\\x22\\x33BuFfEr ReUsE!\");",
-		"```",
+		/// ```
+		/// let mut buffer = vec![0x11, 0x22, 0x33];
+		/// let decoded = basenc::Base64Url.decode_into("QnVGZkVyIFJlVXNFIQ", &mut buffer).unwrap();
+		/// assert_eq!(decoded, b"BuFfEr ReUsE!");
+		/// assert_eq!(buffer, b"\x11\x22\x33BuFfEr ReUsE!");
+		/// ```
 	],
 );
 

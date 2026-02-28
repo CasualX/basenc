@@ -3,10 +3,10 @@ macro_rules! impl_encoding {
 	(
 		$name:path
 		$(,
-			encode: [$($encode_example:literal,)*],
-			decode: [$($decode_example:literal,)*],
-			encode_into: [$($encode_into_example:literal,)*],
-			decode_into: [$($decode_into_example:literal,)*],
+			encode: [$(#[doc = $encode_example:literal])*],
+			decode: [$(#[doc = $decode_example:literal])*],
+			encode_into: [$(#[doc = $encode_into_example:literal])*],
+			decode_into: [$(#[doc = $decode_into_example:literal])*],
 		)?
 	) => {
 		impl $name {
