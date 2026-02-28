@@ -20,6 +20,12 @@ The relative column expresses `basenc` throughput as a multiple of the other cra
 
 Results are from one run and will vary with the machine and toolchain.
 
+## Related implementations
+
+- [`base64-simd`](https://docs.rs/base64-simd/latest/base64_simd/) and its [SIMD encoder](https://github.com/Nugine/simd/blob/main/crates/base64-simd/src/encode.rs)
+- Wojciech Muła's [SIMD base64 decoder examples](https://github.com/WojciechMula/toys/tree/master/base64/decode/sse) and [standalone decoder](https://github.com/WojciechMula/base64simd/blob/master/decode/decode.sse.cpp)
+- [`Turbo-Base64`](https://github.com/powturbo/Turbo-Base64), compared by the `base64_turbo` suite
+
 ### `base64` 0.22.1
 
 | Operation | `basenc` | `base64` | Relative |
