@@ -110,44 +110,44 @@ unsafe fn decode_2bytes(chunk: &[u8; 2], base: &Base32, dest: *mut u8) -> Result
 }
 
 pub unsafe fn decode(mut string: &[u8], base: &Base32, pad: Padding, mut dest: *mut u8) -> Result<*mut u8, crate::Error> {
-	while string.len() >= 8 {
-		let chunk = &*(string.as_ptr() as *const [u8; 8]);
+	while let [c0, c1, c2, c3, c4, c5, c6, c7, ref rest @ ..] = *string {
+		let chunk = [c0, c1, c2, c3, c4, c5, c6, c7];
 
 		if !matches!(pad, Padding::None) && chunk[7] == PAD_CHAR {
 			if chunk[6] == PAD_CHAR && chunk[5] == PAD_CHAR {
 				if chunk[4] == PAD_CHAR {
 					if chunk[3] == PAD_CHAR && chunk[2] == PAD_CHAR {
-						dest = decode_2bytes(&*(chunk as *const _ as *const [u8; 2]), base, dest)?;
+						dest = decode_2bytes(&[c0, c1], base, dest)?;
 					}
 					else {
-						dest = decode_4bytes(&*(chunk as *const _ as *const [u8; 4]), base, dest)?;
+						dest = decode_4bytes(&[c0, c1, c2, c3], base, dest)?;
 					}
 				}
 				else {
-					dest = decode_5bytes(&*(chunk as *const _ as *const [u8; 5]), base, dest)?;
+					dest = decode_5bytes(&[c0, c1, c2, c3, c4], base, dest)?;
 				}
 			}
 			else {
-				dest = decode_7bytes(&*(chunk as *const _ as *const [u8; 7]), base, dest)?;
+				dest = decode_7bytes(&[c0, c1, c2, c3, c4, c5, c6], base, dest)?;
 			}
 		}
 		else {
-			dest = decode_8bytes(chunk, base, dest)?;
+			dest = decode_8bytes(&chunk, base, dest)?;
 		}
 
-		string = &string[8..];
+		string = rest;
 	}
 
-	if string.len() != 0 {
+	if !string.is_empty() {
 		if matches!(pad, Padding::Strict) {
 			return Err(crate::Error::IncorrectLength);
 		}
 
-		dest = match string.len() {
-			7 => decode_7bytes(&*(string.as_ptr() as *const [u8; 7]), base, dest)?,
-			5 => decode_5bytes(&*(string.as_ptr() as *const [u8; 5]), base, dest)?,
-			4 => decode_4bytes(&*(string.as_ptr() as *const [u8; 4]), base, dest)?,
-			2 => decode_2bytes(&*(string.as_ptr() as *const [u8; 2]), base, dest)?,
+		dest = match *string {
+			[c0, c1, c2, c3, c4, c5, c6] => decode_7bytes(&[c0, c1, c2, c3, c4, c5, c6], base, dest)?,
+			[c0, c1, c2, c3, c4] => decode_5bytes(&[c0, c1, c2, c3, c4], base, dest)?,
+			[c0, c1, c2, c3] => decode_4bytes(&[c0, c1, c2, c3], base, dest)?,
+			[c0, c1] => decode_2bytes(&[c0, c1], base, dest)?,
 			_ => return Err(crate::Error::IncorrectLength),
 		};
 	}

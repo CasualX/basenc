@@ -97,7 +97,7 @@ pub unsafe fn encode(mut bytes: &[u8], base: &Base64, pad: Padding, mut dest: *m
 		_mm_storeu_si128(dest as *mut __m128i, ascii);
 
 		bytes = &bytes[12..];
-		dest = dest.offset(16);
+		dest = dest.add(16);
 	}
 
 	scalar::encode(bytes, base, pad, dest)

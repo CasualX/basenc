@@ -15,7 +15,7 @@ pub unsafe fn decode(mut string: &[u8], mut dest: *mut u8) -> Result<*mut u8, cr
 		string = rest;
 	}
 
-	if string.len() != 0 {
+	if !string.is_empty() {
 		return Err(crate::Error::IncorrectLength);
 	}
 

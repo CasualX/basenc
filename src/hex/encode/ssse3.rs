@@ -42,9 +42,9 @@ pub unsafe fn encode(mut bytes: &[u8], dest: *mut u8, base: u8) -> *mut u8 {
 
 		// Store result
 		_mm_storeu_si128(dest, a1);
-		_mm_storeu_si128(dest.offset(1), a2);
+		_mm_storeu_si128(dest.add(1), a2);
 
-		dest = dest.offset(2);
+		dest = dest.add(2);
 		bytes = &bytes[16..];
 	}
 

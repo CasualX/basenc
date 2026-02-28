@@ -29,7 +29,7 @@ pub unsafe fn decode(mut string: &[u8], base: &Base64, pad: Padding, mut dest: *
 		let mov_mask = _mm_setr_epi8(-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, 0, 0, 0);
 		_mm_maskmoveu_si128(compacted, mov_mask, dest as *mut i8);
 
-		dest = dest.offset(12);
+		dest = dest.add(12);
 		string = &string[16..];
 		continue;
 	}

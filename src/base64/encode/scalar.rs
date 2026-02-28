@@ -71,10 +71,10 @@ pub unsafe fn encode(mut bytes: &[u8], base: &Base64, pad: Padding, mut dest: *m
 	}
 
 	// Encode remaining bytes
-	dest = match bytes.len() {
-		3 => encode_3bytes(&*(bytes.as_ptr() as *const [u8; 3]), base, pad, dest),
-		2 => encode_2bytes(&*(bytes.as_ptr() as *const [u8; 2]), base, pad, dest),
-		1 => encode_1byte(&*(bytes.as_ptr() as *const [u8; 1]), base, pad, dest),
+	dest = match *bytes {
+		[b0, b1, b2] => encode_3bytes(&[b0, b1, b2], base, pad, dest),
+		[b0, b1] => encode_2bytes(&[b0, b1], base, pad, dest),
+		[b0] => encode_1byte(&[b0], base, pad, dest),
 		_ => dest,
 	};
 

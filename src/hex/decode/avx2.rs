@@ -44,7 +44,7 @@ pub unsafe fn decode(mut string: &[u8], mut dest: *mut u8) -> Result<*mut u8, cr
 	while string.len() >= 64 {
 		let src = string.as_ptr() as *const __m256i;
 		let av1 = _mm256_lddqu_si256(src);
-		let av2 = _mm256_lddqu_si256(src.offset(1));
+		let av2 = _mm256_lddqu_si256(src.add(1));
 
 		let a1 = _mm256_shuffle_epi8(av1, a_mask);
 		let b1 = _mm256_shuffle_epi8(av1, b_mask);
@@ -61,7 +61,7 @@ pub unsafe fn decode(mut string: &[u8], mut dest: *mut u8) -> Result<*mut u8, cr
 		_mm256_storeu_si256(dest as *mut __m256i, bytes);
 
 		string = &string[64..];
-		dest = dest.offset(32);
+		dest = dest.add(32);
 	}
 
 	scalar::decode(string, dest)

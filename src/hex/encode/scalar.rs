@@ -4,16 +4,15 @@ fn encode_char(nibble: u8, base: u8) -> u8 {
 }
 
 pub unsafe fn encode(mut bytes: &[u8], mut dest: *mut u8, base: u8) -> *mut u8 {
-	while bytes.len() > 0 {
-		let byte = bytes[0];
+	while let &[byte, ref rest @ ..] = bytes {
 		let hi = byte >> 4;
 		let lo = byte & 0xF;
 
-		*dest.offset(0) = encode_char(hi, base);
-		*dest.offset(1) = encode_char(lo, base);
+		*dest.add(0) = encode_char(hi, base);
+		*dest.add(1) = encode_char(lo, base);
 
-		dest = dest.offset(2);
-		bytes = &bytes[1..];
+		dest = dest.add(2);
+		bytes = rest;
 	}
 
 	return dest;

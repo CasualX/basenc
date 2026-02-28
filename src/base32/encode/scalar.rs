@@ -96,17 +96,17 @@ unsafe fn encode_1byte([b0]: &[u8; 1], base: &Base32, pad: Padding, dest: *mut u
 }
 
 pub unsafe fn encode(mut bytes: &[u8], base: &Base32, pad: Padding, mut dest: *mut u8) -> *mut u8 {
-	while bytes.len() >= 5 {
-		dest = encode_5bytes(&*(bytes.as_ptr() as *const [u8; 5]), base, pad, dest);
-		bytes = &bytes[5..];
+	while let [b0, b1, b2, b3, b4, ref rest @ ..] = *bytes {
+		dest = encode_5bytes(&[b0, b1, b2, b3, b4], base, pad, dest);
+		bytes = rest;
 	}
 
 	// Encode remaining bytes
-	let dest = match bytes.len() {
-		4 => encode_4bytes(&*(bytes.as_ptr() as *const [u8; 4]), base, pad, dest),
-		3 => encode_3bytes(&*(bytes.as_ptr() as *const [u8; 3]), base, pad, dest),
-		2 => encode_2bytes(&*(bytes.as_ptr() as *const [u8; 2]), base, pad, dest),
-		1 => encode_1byte(&*(bytes.as_ptr() as *const [u8; 1]), base, pad, dest),
+	let dest = match *bytes {
+		[b0, b1, b2, b3] => encode_4bytes(&[b0, b1, b2, b3], base, pad, dest),
+		[b0, b1, b2] => encode_3bytes(&[b0, b1, b2], base, pad, dest),
+		[b0, b1] => encode_2bytes(&[b0, b1], base, pad, dest),
+		[b0] => encode_1byte(&[b0], base, pad, dest),
 		_ => dest,
 	};
 
