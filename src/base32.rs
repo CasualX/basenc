@@ -76,7 +76,9 @@ impl Encoding for WithPad<'_, Base32> {
 	}
 }
 
-impl_encoding!(Base32);
+impl Base32 {
+	impl_encoding!();
+}
 
 //----------------------------------------------------------------
 

@@ -24,33 +24,35 @@ impl Encoding for LowerHex {
 	}
 }
 
-impl_encoding!(LowerHex,
-	encode: [
-		/// ```
-		/// let encoded = basenc::LowerHex.encode(b"\x00\x80\xFF\xDC");
-		/// assert_eq!(encoded, "0080ffdc");
-		/// ```
-	],
-	decode: [
-		/// ```
-		/// let decoded = basenc::LowerHex.decode("0080FFdc").unwrap();
-		/// assert_eq!(decoded, b"\x00\x80\xFF\xDC");
-		/// ```
-	],
-	encode_into: [
-		/// ```
-		/// let mut stack_buf = [0u8; 16];
-		/// let encoded = basenc::LowerHex.encode_into(b"\x00\x80\xFF\xDC", &mut stack_buf);
-		/// assert_eq!(encoded, "0080ffdc");
-		/// ```
-	],
-	decode_into: [
-		/// ```
-		/// let decoded = basenc::LowerHex.decode_into("0080FFdc", Vec::new()).unwrap();
-		/// assert_eq!(decoded, b"\x00\x80\xFF\xDC");
-		/// ```
-	],
-);
+impl LowerHex {
+	impl_encoding!(
+		encode: [
+			/// ```
+			/// let encoded = basenc::LowerHex.encode(b"\x00\x80\xFF\xDC");
+			/// assert_eq!(encoded, "0080ffdc");
+			/// ```
+		],
+		decode: [
+			/// ```
+			/// let decoded = basenc::LowerHex.decode("0080FFdc").unwrap();
+			/// assert_eq!(decoded, b"\x00\x80\xFF\xDC");
+			/// ```
+		],
+		encode_into: [
+			/// ```
+			/// let mut stack_buf = [0u8; 16];
+			/// let encoded = basenc::LowerHex.encode_into(b"\x00\x80\xFF\xDC", &mut stack_buf);
+			/// assert_eq!(encoded, "0080ffdc");
+			/// ```
+		],
+		decode_into: [
+			/// ```
+			/// let decoded = basenc::LowerHex.decode_into("0080FFdc", Vec::new()).unwrap();
+			/// assert_eq!(decoded, b"\x00\x80\xFF\xDC");
+			/// ```
+		],
+	);
+}
 
 //----------------------------------------------------------------
 
@@ -76,33 +78,35 @@ impl Encoding for UpperHex {
 	}
 }
 
-impl_encoding!(UpperHex,
-	encode: [
-		/// ```
-		/// let encoded = basenc::UpperHex.encode(b"\x00\x80\xFF\xDC");
-		/// assert_eq!(encoded, "0080FFDC");
-		/// ```
-	],
-	decode: [
-		/// ```
-		/// let decoded = basenc::UpperHex.decode("0080ffDC").unwrap();
-		/// assert_eq!(decoded, b"\x00\x80\xFF\xDC");
-		/// ```
-	],
-	encode_into: [
-		/// ```
-		/// let mut stack_buf = [0u8; 16];
-		/// let encoded = basenc::UpperHex.encode_into(b"\x00\x80\xFF\xDC", &mut stack_buf);
-		/// assert_eq!(encoded, "0080FFDC");
-		/// ```
-	],
-	decode_into: [
-		/// ```
-		/// let decoded = basenc::UpperHex.decode_into("0080ffDC", Vec::new()).unwrap();
-		/// assert_eq!(decoded, b"\x00\x80\xFF\xDC");
-		/// ```
-	],
-);
+impl UpperHex {
+	impl_encoding!(
+		encode: [
+			/// ```
+			/// let encoded = basenc::UpperHex.encode(b"\x00\x80\xFF\xDC");
+			/// assert_eq!(encoded, "0080FFDC");
+			/// ```
+		],
+		decode: [
+			/// ```
+			/// let decoded = basenc::UpperHex.decode("0080ffDC").unwrap();
+			/// assert_eq!(decoded, b"\x00\x80\xFF\xDC");
+			/// ```
+		],
+		encode_into: [
+			/// ```
+			/// let mut stack_buf = [0u8; 16];
+			/// let encoded = basenc::UpperHex.encode_into(b"\x00\x80\xFF\xDC", &mut stack_buf);
+			/// assert_eq!(encoded, "0080FFDC");
+			/// ```
+		],
+		decode_into: [
+			/// ```
+			/// let decoded = basenc::UpperHex.decode_into("0080ffDC", Vec::new()).unwrap();
+			/// assert_eq!(decoded, b"\x00\x80\xFF\xDC");
+			/// ```
+		],
+	);
+}
 
 //----------------------------------------------------------------
 // Encoding
