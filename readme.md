@@ -4,7 +4,7 @@ BaseNC
 [![MIT License](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![crates.io](https://img.shields.io/crates/v/basenc.svg)](https://crates.io/crates/basenc)
 [![docs.rs](https://docs.rs/basenc/badge.svg)](https://docs.rs/basenc)
-[![Build status](https://github.com/CasualX/basenc/workflows/CI/badge.svg)](https://github.com/CasualX/basenc/actions)
+[![Build status](https://github.com/CasualX/basenc/actions/workflows/gate.yml/badge.svg)](https://github.com/CasualX/basenc/actions/workflows/gate.yml)
 
 Pronounced **"Base-En-See"**.
 

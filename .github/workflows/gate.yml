@@ -1,0 +1,93 @@
+name: Gate
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+  workflow_dispatch:
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        rust:
+          - stable
+          - beta
+          - nightly
+
+    name: Gate (${{ matrix.rust }})
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v7
+
+      - name: Install toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+
+      - name: Run tests
+        run: cargo test
+
+      - name: Run tests with static SSE2
+        env:
+          RUSTFLAGS: -C target-feature=+sse2,-ssse3
+        run: cargo test --no-default-features --features std
+
+      - name: Run tests with static SSSE3
+        env:
+          RUSTFLAGS: -C target-feature=+sse2,+ssse3
+        run: cargo test --no-default-features --features std
+
+      - name: Run proptest tests (Release)
+        working-directory: proptest
+        run: cargo test --release
+
+  windows:
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        include:
+          - name: x64 scalar
+            target: x86_64-pc-windows-msvc
+            rustflags: -C target-feature=-ssse3
+            features: std,simd-off
+          - name: x64 SSE2
+            target: x86_64-pc-windows-msvc
+            rustflags: -C target-feature=+sse2,-ssse3
+            features: std
+          - name: x64 SSSE3
+            target: x86_64-pc-windows-msvc
+            rustflags: -C target-feature=+sse2,+ssse3
+            features: std
+          - name: x86 scalar
+            target: i686-pc-windows-msvc
+            rustflags: -C target-feature=-sse2,-ssse3
+            features: std
+          - name: x86 SSE2
+            target: i686-pc-windows-msvc
+            rustflags: -C target-feature=+sse2,-ssse3
+            features: std
+          - name: x86 SSSE3
+            target: i686-pc-windows-msvc
+            rustflags: -C target-feature=+sse2,+ssse3
+            features: std
+
+    name: Windows (${{ matrix.name }})
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v7
+
+      - name: Install toolchain and target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Run tests
+        env:
+          RUSTFLAGS: ${{ matrix.rustflags }}
+        run: cargo test --target ${{ matrix.target }} --no-default-features --features ${{ matrix.features }}
