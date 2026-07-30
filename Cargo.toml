@@ -26,5 +26,5 @@ simd-runtime = [] # Enable runtime detection of SIMD support.
 cfg-if = "1.0"
 
 [dev-dependencies]
-urandom = "0.1"
+urandom = "1.0.0-alpha.1"
 simple-base64 = "0.23"

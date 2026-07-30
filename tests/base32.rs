@@ -30,7 +30,7 @@ fn smash(encoding: &impl Encoding, input_buf: &mut [u8]) {
 	let mut rng = urandom::new();
 
 	for _ in 0..1000 {
-		let len = rng.range(0..input_buf.len());
+		let len = rng.uniform(0..input_buf.len());
 		rng.fill_bytes(&mut input_buf[..len]);
 
 		let input = &input_buf[..len];
