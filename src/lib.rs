@@ -38,6 +38,7 @@ Existing buffers can be reused with the [`encode_into`](Encoding::encode_into) a
 */
 
 #![no_std]
+#![allow(unsafe_op_in_unsafe_fn)] // All unsafe fn use unsafe code inside
 
 #[allow(unused_imports)]
 use core::{fmt, mem, ptr, slice, str};

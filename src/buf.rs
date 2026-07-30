@@ -30,7 +30,7 @@ use core::{mem, slice, str};
 /// - `&mut [MaybeUninit<u8>]`
 /// - `&mut [MaybeUninit<u8>; N]`
 /// - `&mut MaybeUninit<[u8; N]>`
-pub trait DecodeBuf {
+pub unsafe trait DecodeBuf {
 	type Output;
 
 	/// Returns a non-null pointer to uninitialized memory valid for writes up to `len` bytes.
@@ -43,6 +43,7 @@ pub trait DecodeBuf {
 	/// * The allocated memory is logically uninitialized and must not be read before being written.
 	/// * The memory must remain valid until `commit` is called.
 	/// * No other access to the buffer may occur between `allocate` and `commit`.
+	/// * Dropping the buffer without calling `commit` is sound.
 	unsafe fn allocate(&mut self, len: usize) -> *mut u8;
 
 	/// Commits `len` bytes previously allocated.
@@ -58,7 +59,7 @@ pub trait DecodeBuf {
 	unsafe fn commit(self, len: usize) -> Self::Output;
 }
 
-impl<'a, const N: usize> DecodeBuf for &'a mut mem::MaybeUninit<[u8; N]> {
+unsafe impl<'a, const N: usize> DecodeBuf for &'a mut mem::MaybeUninit<[u8; N]> {
 	type Output = &'a [u8];
 	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
 		if len > N {
@@ -72,7 +73,7 @@ impl<'a, const N: usize> DecodeBuf for &'a mut mem::MaybeUninit<[u8; N]> {
 	}
 }
 
-impl<'a, const N: usize> DecodeBuf for &'a mut [mem::MaybeUninit<u8>; N] {
+unsafe impl<'a, const N: usize> DecodeBuf for &'a mut [mem::MaybeUninit<u8>; N] {
 	type Output = &'a [u8];
 	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
 		if len > N {
@@ -86,7 +87,7 @@ impl<'a, const N: usize> DecodeBuf for &'a mut [mem::MaybeUninit<u8>; N] {
 	}
 }
 
-impl<'a, const N: usize> DecodeBuf for &'a mut [u8; N] {
+unsafe impl<'a, const N: usize> DecodeBuf for &'a mut [u8; N] {
 	type Output = &'a [u8];
 	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
 		if len > N {
@@ -100,7 +101,7 @@ impl<'a, const N: usize> DecodeBuf for &'a mut [u8; N] {
 	}
 }
 
-impl<'a> DecodeBuf for &'a mut [mem::MaybeUninit<u8>] {
+unsafe impl<'a> DecodeBuf for &'a mut [mem::MaybeUninit<u8>] {
 	type Output = &'a [u8];
 	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
 		if len > self.len() {
@@ -114,7 +115,7 @@ impl<'a> DecodeBuf for &'a mut [mem::MaybeUninit<u8>] {
 	}
 }
 
-impl<'a> DecodeBuf for &'a mut [u8] {
+unsafe impl<'a> DecodeBuf for &'a mut [u8] {
 	type Output = &'a [u8];
 	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
 		if len > self.len() {
@@ -129,7 +130,7 @@ impl<'a> DecodeBuf for &'a mut [u8] {
 }
 
 #[cfg(any(test, feature = "std"))]
-impl DecodeBuf for ::std::vec::Vec<u8> {
+unsafe impl DecodeBuf for ::std::vec::Vec<u8> {
 	type Output = ::std::vec::Vec<u8>;
 	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
 		self.reserve(len);
@@ -143,7 +144,7 @@ impl DecodeBuf for ::std::vec::Vec<u8> {
 }
 
 #[cfg(any(test, feature = "std"))]
-impl<'a> DecodeBuf for &'a mut ::std::vec::Vec<u8> {
+unsafe impl<'a> DecodeBuf for &'a mut ::std::vec::Vec<u8> {
 	type Output = &'a [u8];
 	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
 		self.reserve(len);
@@ -183,7 +184,7 @@ impl<'a> DecodeBuf for &'a mut ::std::vec::Vec<u8> {
 /// - `&mut [MaybeUninit<u8>]`
 /// - `&mut [MaybeUninit<u8>; N]`
 /// - `&mut MaybeUninit<[u8; N]>`
-pub trait EncodeBuf {
+pub unsafe trait EncodeBuf {
 	type Output;
 
 	/// Returns a non-null pointer to uninitialized memory valid for writes up to `len` bytes.
@@ -196,6 +197,7 @@ pub trait EncodeBuf {
 	/// * The allocated memory is logically uninitialized and must not be read before being written.
 	/// * The memory must remain valid until `commit` is called.
 	/// * No other access to the buffer may occur between `allocate` and `commit`.
+	/// * Dropping the buffer without calling `commit` is sound.
 	unsafe fn allocate(&mut self, len: usize) -> *mut u8;
 
 	/// Commits `len` bytes previously allocated.
@@ -212,7 +214,7 @@ pub trait EncodeBuf {
 	unsafe fn commit(self, len: usize) -> Self::Output;
 }
 
-impl<'a, const N: usize> EncodeBuf for &'a mut mem::MaybeUninit<[u8; N]> {
+unsafe impl<'a, const N: usize> EncodeBuf for &'a mut mem::MaybeUninit<[u8; N]> {
 	type Output = &'a str;
 	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
 		if len > N {
@@ -227,7 +229,7 @@ impl<'a, const N: usize> EncodeBuf for &'a mut mem::MaybeUninit<[u8; N]> {
 	}
 }
 
-impl<'a, const N: usize> EncodeBuf for &'a mut [mem::MaybeUninit<u8>; N] {
+unsafe impl<'a, const N: usize> EncodeBuf for &'a mut [mem::MaybeUninit<u8>; N] {
 	type Output = &'a str;
 	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
 		if len > N {
@@ -242,7 +244,7 @@ impl<'a, const N: usize> EncodeBuf for &'a mut [mem::MaybeUninit<u8>; N] {
 	}
 }
 
-impl<'a, const N: usize> EncodeBuf for &'a mut [u8; N] {
+unsafe impl<'a, const N: usize> EncodeBuf for &'a mut [u8; N] {
 	type Output = &'a str;
 	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
 		if len > N {
@@ -257,7 +259,7 @@ impl<'a, const N: usize> EncodeBuf for &'a mut [u8; N] {
 	}
 }
 
-impl<'a> EncodeBuf for &'a mut [mem::MaybeUninit<u8>] {
+unsafe impl<'a> EncodeBuf for &'a mut [mem::MaybeUninit<u8>] {
 	type Output = &'a str;
 	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
 		if len > self.len() {
@@ -272,7 +274,7 @@ impl<'a> EncodeBuf for &'a mut [mem::MaybeUninit<u8>] {
 	}
 }
 
-impl<'a> EncodeBuf for &'a mut [u8] {
+unsafe impl<'a> EncodeBuf for &'a mut [u8] {
 	type Output = &'a str;
 	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
 		if len > self.len() {
@@ -288,7 +290,7 @@ impl<'a> EncodeBuf for &'a mut [u8] {
 }
 
 #[cfg(any(test, feature = "std"))]
-impl EncodeBuf for ::std::string::String {
+unsafe impl EncodeBuf for ::std::string::String {
 	type Output = ::std::string::String;
 	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
 		let vec = self.as_mut_vec();
@@ -306,7 +308,7 @@ impl EncodeBuf for ::std::string::String {
 }
 
 #[cfg(any(test, feature = "std"))]
-impl<'a> EncodeBuf for &'a mut ::std::string::String {
+unsafe impl<'a> EncodeBuf for &'a mut ::std::string::String {
 	type Output = &'a str;
 	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
 		let vec = self.as_mut_vec();
@@ -323,7 +325,7 @@ impl<'a> EncodeBuf for &'a mut ::std::string::String {
 }
 
 #[cfg(any(test, feature = "std"))]
-impl<'a> EncodeBuf for &'a mut ::std::vec::Vec<u8> {
+unsafe impl<'a> EncodeBuf for &'a mut ::std::vec::Vec<u8> {
 	type Output = &'a str;
 	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
 		self.reserve(len);

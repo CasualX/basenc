@@ -2,7 +2,7 @@
 name = "basenc"
 version = "0.2.3"
 authors = ["Casper <CasualX@users.noreply.github.com>"]
-edition = "2021"
+edition = "2024"
 
 description = "Encoding and decoding hex, base64 and base32 with support for #[no_std]."
 documentation = "https://docs.rs/basenc/"
