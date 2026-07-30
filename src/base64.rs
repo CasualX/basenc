@@ -157,12 +157,6 @@ impl Base64 {
 
 //----------------------------------------------------------------
 
-/// Base64 standard charset.
-///
-/// The alphabet is `A-Za-z0-9+/`.
-#[allow(non_upper_case_globals)]
-pub static Base64Std: Base64 = Base64::new(b'+', b'/');
-
 /// Base64 url-safe charset.
 ///
 /// The alphabet is `A-Za-z0-9-_`.

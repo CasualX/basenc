@@ -28,4 +28,3 @@ cfg-if = "1.0"
 
 [dev-dependencies]
 urandom = "1.0.0-alpha.1"
-simple-base64 = "0.23"

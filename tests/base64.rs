@@ -150,3 +150,67 @@ fn random() {
 	smash(&Base64Std.pad(NoPad), &mut stack_buf);
 	smash(&Base64Url.pad(NoPad), &mut stack_buf);
 }
+
+#[test]
+fn simd_character_validation() {
+	fn check(encoding: &impl Encoding, char62: u8, char63: u8) {
+		for byte in 0..=u8::MAX {
+			let mut string = [b'A'; 32];
+			string[8] = byte;
+			let valid = byte.is_ascii_uppercase()
+				|| byte.is_ascii_lowercase()
+				|| byte.is_ascii_digit()
+				|| byte == char62
+				|| byte == char63;
+			assert_eq!(
+				encoding.decode_into(&string, Vec::new()).is_ok(),
+				valid,
+				"byte {byte:#04x}",
+			);
+		}
+	}
+
+	check(&Base64Std.pad(NoPad), b'+', b'/');
+	check(&Base64Url.pad(NoPad), b'-', b'_');
+}
+
+#[test]
+fn simd_stores_stay_within_estimated_output() {
+	const CANARY: u8 = 0xa5;
+	let encoding = Base64Std.pad(NoPad);
+
+	for len in 0usize..=256 {
+		let input: Vec<_> = (0..len).map(|i| (i as u8).wrapping_mul(37)).collect();
+		let encoded_capacity = (len.saturating_add(2) / 3) * 4;
+		let mut encoded_storage = [CANARY; 400];
+		let encoded = encoding
+			.encode_into(&input, &mut encoded_storage[..encoded_capacity])
+			.to_owned();
+		assert!(encoded_storage[encoded_capacity..].iter().all(|&byte| byte == CANARY));
+
+		let decoded_capacity = (encoded.len().saturating_add(3) / 4) * 3;
+		let mut decoded_storage = [CANARY; 300];
+		let decoded = encoding
+			.decode_into(&encoded, &mut decoded_storage[..decoded_capacity])
+			.unwrap();
+		assert_eq!(decoded, input);
+		assert!(decoded_storage[decoded_capacity..].iter().all(|&byte| byte == CANARY));
+	}
+}
+
+#[test]
+fn dedicated_standard_matches_generic_alphabet() {
+	assert_eq!(core::mem::size_of::<Base64Std>(), 0);
+	let generic = Base64::new(b'+', b'/');
+
+	for pad in [Padding::Forbidden, Padding::Optional, Padding::Required, Padding::Internal] {
+		let dedicated = Base64Std.pad(pad);
+		let generic = generic.pad(pad);
+		for len in 0usize..=256 {
+			let input: Vec<_> = (0..len).map(|i| (i as u8).wrapping_mul(73)).collect();
+			let encoded = dedicated.encode(&input);
+			assert_eq!(generic.encode(&input), encoded);
+			assert_eq!(dedicated.decode(&encoded), generic.decode(&encoded));
+		}
+	}
+}

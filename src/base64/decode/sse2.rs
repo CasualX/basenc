@@ -9,7 +9,7 @@ use super::*;
 
 #[target_feature(enable = "sse2")]
 pub unsafe fn decode(mut string: &[u8], base: &Base64, pad: Padding, mut dest: *mut u8) -> Result<*mut u8, crate::Error> {
-	if string.len() == 0 {
+	if string.is_empty() {
 		return Ok(dest);
 	}
 
@@ -24,14 +24,24 @@ pub unsafe fn decode(mut string: &[u8], base: &Base64, pad: Padding, mut dest: *
 
 		let packed = pack(values);
 		let compacted = compact(packed);
-		let mov_mask = _mm_setr_epi8(-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 0, 0, 0, 0);
-		_mm_maskmoveu_si128(compacted, mov_mask, dest as *mut i8);
+		store(compacted, dest);
 
 		dest = dest.add(12);
-		string = &string[16..];
+		string = string.get_unchecked(16..);
 	}
 
 	scalar::decode(string, base, pad, dest)
+}
+
+//----------------------------------------------------------------
+
+/// Store the 12 decoded bytes without touching the four bytes past the output.
+#[inline]
+#[target_feature(enable = "sse2")]
+unsafe fn store(value: __m128i, dest: *mut u8) {
+	_mm_storel_epi64(dest as *mut __m128i, value);
+	let high = _mm_srli_si128::<8>(value);
+	(dest.add(8) as *mut u32).write_unaligned(_mm_cvtsi128_si32(high) as u32);
 }
 
 //----------------------------------------------------------------

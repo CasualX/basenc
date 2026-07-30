@@ -66,6 +66,9 @@ pub use self::hex::*;
 mod base64;
 pub use self::base64::*;
 
+mod base64std;
+pub use self::base64std::*;
+
 mod base32;
 pub use self::base32::*;
 
