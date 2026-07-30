@@ -1,0 +1,9 @@
+[package]
+name = "basenc-benchmark-base64-turbo"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+basenc = { path = "../.." }
+base64-turbo = "0.2"
