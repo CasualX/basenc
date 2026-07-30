@@ -4,6 +4,9 @@ const RATIO: Ratio = Ratio::new(3, 4);
 const PAD_CHAR: u8 = b'=';
 
 /// Base64 alphabet.
+///
+/// Encoding and decoding directly with this type use [`Padding::Optional`].
+/// Use [`Base64::pad`] to select a different padding policy.
 #[derive(Clone, Debug)]
 #[allow(dead_code)]
 pub struct Base64 {

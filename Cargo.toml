@@ -21,7 +21,7 @@ std = []
 
 # SIMD acceleration
 simd-off = [] # Disable SIMD acceleration.
-simd-runtime = [] # Enable runtime detection of SIMD support.
+simd-runtime = ["std"] # Enable runtime detection of SIMD support.
 
 [dependencies]
 cfg-if = "1.0"

@@ -30,6 +30,10 @@ use core::{mem, slice, str};
 /// - `&mut [MaybeUninit<u8>]`
 /// - `&mut [MaybeUninit<u8>; N]`
 /// - `&mut MaybeUninit<[u8; N]>`
+///
+/// # Safety
+///
+/// Implementors must uphold the contracts documented on [`allocate`](DecodeBuf::allocate) and [`commit`](DecodeBuf::commit).
 pub unsafe trait DecodeBuf {
 	type Output;
 
@@ -54,7 +58,9 @@ pub unsafe trait DecodeBuf {
 	///
 	/// # Safety
 	///
+	/// * This must follow a successful call to `allocate` on the same buffer.
 	/// * The length passed to `commit` must be less than or equal to the length passed to `allocate`.
+	/// * The first `len` bytes of the allocated memory must have been initialized.
 	/// * No other access to the buffer may occur between `allocate` and `commit`.
 	unsafe fn commit(self, len: usize) -> Self::Output;
 }
@@ -184,6 +190,10 @@ unsafe impl<'a> DecodeBuf for &'a mut ::std::vec::Vec<u8> {
 /// - `&mut [MaybeUninit<u8>]`
 /// - `&mut [MaybeUninit<u8>; N]`
 /// - `&mut MaybeUninit<[u8; N]>`
+///
+/// # Safety
+///
+/// Implementors must uphold the contracts documented on [`allocate`](EncodeBuf::allocate) and [`commit`](EncodeBuf::commit).
 pub unsafe trait EncodeBuf {
 	type Output;
 
@@ -208,8 +218,9 @@ pub unsafe trait EncodeBuf {
 	///
 	/// # Safety
 	///
+	/// * This must follow a successful call to `allocate` on the same buffer.
 	/// * The length passed to `commit` must be less than or equal to the length passed to `allocate`.
-	/// * The caller must write only valid UTF-8 to the returned memory.
+	/// * The first `len` bytes of the allocated memory must have been initialized and contain valid UTF-8.
 	/// * No other access to the buffer may occur between `allocate` and `commit`.
 	unsafe fn commit(self, len: usize) -> Self::Output;
 }

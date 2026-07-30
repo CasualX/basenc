@@ -39,9 +39,9 @@ assert_eq!(decoded, b"hello world");
 
 * `std` (default) - Enable support for the standard library, including convenient encoding/decoding to `String` and `Vec<u8>`.
 
-* `simd-off` - Disable SIMD acceleration. (The SIMD paths are less tested and may contain bugs.)
+* `simd-runtime` (default) - Enable runtime detection of SIMD support. This feature requires `std`, and will automatically use SIMD acceleration when available.
 
-* `simd-runtime` - Enable runtime detection of SIMD support. This is **on by default**, and will automatically use SIMD acceleration when available.
+* `simd-off` - Disable SIMD acceleration. (The SIMD paths are less tested and may contain bugs.)
 
 Tip: Build with `RUSTFLAGS="-C target-cpu=native"` (bash) or `set RUSTFLAGS=-C target-cpu=native` (cmd) to **enable compiletime detection**.
 

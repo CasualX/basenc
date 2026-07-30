@@ -4,6 +4,9 @@ const RATIO: Ratio = Ratio::new(5, 8);
 const PAD_CHAR: u8 = b'=';
 
 /// Base32 alphabet.
+///
+/// Encoding and decoding directly with this type use [`Padding::Optional`].
+/// Use [`Base32::pad`] to select a different padding policy.
 #[derive(Clone, Debug)]
 pub struct Base32 {
 	charset: [u8; 32],
