@@ -87,6 +87,12 @@ fn proptest() {
 	roundtrip("a￼\u{1cd00}ਏΣ".as_bytes(), &Base64Url, "Ye-_vPCctIDgqI_Oow");
 }
 
+#[test]
+fn custom_alphabets() {
+	roundtrip(&[0xfb, 0xef, 0xbe, 0xfb, 0xef, 0xbe, 0xfb, 0xef, 0xbe, 0xfb, 0xef, 0xbe], &Base64::new(b'>', b'/'), ">>>>>>>>>>>>>>>>");
+	roundtrip(&[0xff; 12], &Base64::new(b'+', b'?'), "????????????????");
+}
+
 fn smash(encoding: &impl Encoding, input_buf: &mut [u8]) {
 	let mut rng = urandom::new();
 

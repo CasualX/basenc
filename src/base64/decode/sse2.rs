@@ -46,20 +46,23 @@ unsafe fn lookup(input: __m128i, base: &Base64) -> Result<__m128i, crate::Error>
 	// shift for range 'A' - 'Z'
 	let ge_A = _mm_cmpgt_epi8(input, _mm_set1_epi8(b'A' as i8 - 1));
 	let le_Z = _mm_cmplt_epi8(input, _mm_set1_epi8(b'Z' as i8 + 1));
+	let mask_AZ = _mm_and_si128(ge_A, le_Z);
 	let shift_AZ = _mm_set1_epi8(0u8.wrapping_sub(b'A') as i8);
-	let range_AZ = _mm_and_si128(shift_AZ, _mm_and_si128(ge_A, le_Z));
+	let range_AZ = _mm_and_si128(shift_AZ, mask_AZ);
 
 	// shift range for 'a' - 'z'
 	let ge_a = _mm_cmpgt_epi8(input, _mm_set1_epi8(b'a' as i8 - 1));
 	let le_z = _mm_cmplt_epi8(input, _mm_set1_epi8(b'z' as i8 + 1));
+	let mask_az = _mm_and_si128(ge_a, le_z);
 	let shift_az = _mm_set1_epi8(26u8.wrapping_sub(b'a') as i8);
-	let range_az = _mm_and_si128(shift_az, _mm_and_si128(ge_a, le_z));
+	let range_az = _mm_and_si128(shift_az, mask_az);
 
 	// shift for range '0' - '9'
 	let ge_0 = _mm_cmpgt_epi8(input, _mm_set1_epi8(b'0' as i8 - 1));
 	let le_9 = _mm_cmplt_epi8(input, _mm_set1_epi8(b'9' as i8 + 1));
+	let mask_09 = _mm_and_si128(ge_0, le_9);
 	let shift_09 = _mm_set1_epi8(52u8.wrapping_sub(b'0') as i8);
-	let range_09 = _mm_and_si128(shift_09, _mm_and_si128(ge_0, le_9));
+	let range_09 = _mm_and_si128(shift_09, mask_09);
 
 	// shift for character '+'
 	let eq_char62 = _mm_cmpeq_epi8(input, _mm_set1_epi8(base.charset[62] as i8));
@@ -78,8 +81,11 @@ unsafe fn lookup(input: __m128i, base: &Base64) -> Result<__m128i, crate::Error>
 		_mm_or_si128(char_char62, char_char63))));
 
 	// check for errors
-	let mask = _mm_movemask_epi8(_mm_cmpeq_epi8(shift, _mm_setzero_si128()));
-	if mask != 0 {
+	let valid = _mm_or_si128(mask_AZ,
+		_mm_or_si128(mask_az,
+		_mm_or_si128(mask_09,
+		_mm_or_si128(eq_char62, eq_char63))));
+	if _mm_movemask_epi8(valid) != 0xffff {
 		return Err(crate::Error::InvalidCharacter);
 	}
 
