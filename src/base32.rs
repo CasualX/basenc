@@ -1,6 +1,6 @@
 use super::*;
 
-const RATIO: Ratio = Ratio { decoded: 5, encoded: 8 };
+const RATIO: Ratio = Ratio::new(5, 8);
 const PAD_CHAR: u8 = b'=';
 
 /// Base32 alphabet.

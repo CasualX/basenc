@@ -1,6 +1,6 @@
 use super::*;
 
-const RATIO: Ratio = Ratio { decoded: 3, encoded: 4 };
+const RATIO: Ratio = Ratio::new(3, 4);
 const PAD_CHAR: u8 = b'=';
 
 /// Base64 alphabet.

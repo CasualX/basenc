@@ -1,6 +1,6 @@
 use super::*;
 
-const RATIO: Ratio = Ratio { decoded: 1, encoded: 2 };
+const RATIO: Ratio = Ratio::new(1, 2);
 
 /// Hex charset using lower-case letters.
 ///
