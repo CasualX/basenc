@@ -92,6 +92,8 @@ fn padding_policies() {
 	let optional = Base64Std.pad(Padding::Optional);
 	assert_eq!(optional.encode(b"f"), "Zg");
 	assert_eq!(optional.decode("Zg"), Ok(b"f".to_vec()));
+	assert_eq!(optional.decode_bytes(b"Zg"), Ok(b"f".to_vec()));
+	assert_eq!(optional.decode_bytes_into(b"Zg", Vec::new()), Ok(b"f".to_vec()));
 	assert_eq!(optional.decode("Zg=="), Ok(b"f".to_vec()));
 	assert_eq!(optional.decode("Zg==Zm8="), Err(Error::InvalidCharacter));
 

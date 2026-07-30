@@ -31,7 +31,14 @@ macro_rules! impl_encoding {
 			)?
 			#[inline]
 			pub fn decode(&self, string: &str) -> Result<std::vec::Vec<u8>, crate::Error> {
-				crate::Encoding::decode_into(self, string.as_bytes(), std::vec::Vec::new())
+				self.decode_bytes(string.as_bytes())
+			}
+
+			#[cfg(feature = "std")]
+			/// Decodes the input bytes.
+			#[inline]
+			pub fn decode_bytes(&self, bytes: &[u8]) -> Result<std::vec::Vec<u8>, crate::Error> {
+				crate::Encoding::decode_into(self, bytes, std::vec::Vec::new())
 			}
 
 			/// Encodes into a buffer.
@@ -53,7 +60,13 @@ macro_rules! impl_encoding {
 			)?
 			#[inline]
 			pub fn decode_into<B: crate::DecodeBuf>(&self, string: &str, buffer: B) -> Result<B::Output, crate::Error> {
-				crate::Encoding::decode_into(self, string.as_bytes(), buffer)
+				self.decode_bytes_into(string.as_bytes(), buffer)
+			}
+
+			/// Decodes bytes into a buffer.
+			#[inline]
+			pub fn decode_bytes_into<B: crate::DecodeBuf>(&self, bytes: &[u8], buffer: B) -> Result<B::Output, crate::Error> {
+				crate::Encoding::decode_into(self, bytes, buffer)
 			}
 
 			/// Wraps the encoding and bytes for display.

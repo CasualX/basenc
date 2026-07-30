@@ -25,6 +25,9 @@ fn stuff() {
 	roundtrip(bytes, &UpperHex, "5ACFFDA7CA3E373D4A11");
 	assert_eq!(LowerHex.decode_into("5ACfFda7cA3e373D4a11", &mut [0u8; 16]), Ok(bytes));
 	assert_eq!(UpperHex.decode_into("5acFfDA7Ca3E373d4A11", &mut [0u8; 16]), Ok(bytes));
+	assert_eq!(LowerHex.decode_bytes(b"5ACfFda7cA3e373D4a11").as_deref(), Ok(bytes));
+	assert_eq!(UpperHex.decode_bytes_into(b"5acFfDA7Ca3E373d4A11", &mut [0u8; 16]), Ok(bytes));
+	assert_eq!(LowerHex.decode_bytes(b"00\xff0"), Err(Error::InvalidCharacter));
 }
 
 fn smash(encoding: &impl Encoding, input_buf: &mut [u8]) {
