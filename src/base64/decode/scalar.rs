@@ -56,26 +56,12 @@ unsafe fn decode_2bytes(chunk: &[u8; 2], base: &Base64, dest: *mut u8) -> Result
 }
 
 pub unsafe fn decode(mut string: &[u8], base: &Base64, pad: Padding, mut dest: *mut u8) -> Result<*mut u8, crate::Error> {
-	while let [c0, c1, c2, c3, ref rest @ ..] = *string {
-		let chunk = [c0, c1, c2, c3];
-
-		if !matches!(pad, Padding::None) && chunk[3] == PAD_CHAR {
-			if chunk[2] == PAD_CHAR {
-				dest = decode_2bytes(&[c0, c1], base, dest)?;
-			}
-			else {
-				dest = decode_3bytes(&[c0, c1, c2], base, dest)?;
-			}
-		}
-		else {
-			dest = decode_4bytes(&chunk, base, dest)?;
-		}
-
-		string = rest;
+	while string.len() >= 4 {
+		dest = decode_chunk(&mut string, base, pad, dest)?;
 	}
 
 	if !string.is_empty() {
-		if matches!(pad, Padding::Strict) {
+		if matches!(pad, Padding::Required) {
 			return Err(crate::Error::IncorrectLength);
 		}
 
@@ -87,5 +73,32 @@ pub unsafe fn decode(mut string: &[u8], base: &Base64, pad: Padding, mut dest: *
 		};
 	}
 
+	Ok(dest)
+}
+
+#[inline]
+pub unsafe fn decode_chunk(string: &mut &[u8], base: &Base64, pad: Padding, dest: *mut u8) -> Result<*mut u8, crate::Error> {
+	let [c0, c1, c2, c3, ref rest @ ..] = **string
+	else {
+		return Err(crate::Error::IncorrectLength);
+	};
+	let chunk = [c0, c1, c2, c3];
+
+	let dest = if !matches!(pad, Padding::Forbidden) && chunk[3] == PAD_CHAR {
+		if !matches!(pad, Padding::Internal) && rest.iter().any(|&byte| byte != PAD_CHAR) {
+			return Err(crate::Error::InvalidCharacter);
+		}
+		if chunk[2] == PAD_CHAR {
+			decode_2bytes(&[c0, c1], base, dest)?
+		}
+		else {
+			decode_3bytes(&[c0, c1, c2], base, dest)?
+		}
+	}
+	else {
+		decode_4bytes(&chunk, base, dest)?
+	};
+
+	*string = rest;
 	Ok(dest)
 }

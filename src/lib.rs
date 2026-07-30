@@ -37,15 +37,12 @@ Existing buffers can be reused with the [`encode_into`](Encoding::encode_into) a
 
 */
 
-#![no_std]
+#![cfg_attr(not(any(test, feature = "std")), no_std)]
+
 #![allow(unsafe_op_in_unsafe_fn)] // All unsafe fn use unsafe code inside
 
 #[allow(unused_imports)]
 use core::{fmt, mem, ptr, slice, str};
-
-#[cfg(any(test, feature = "std"))]
-#[macro_use]
-extern crate std;
 
 #[macro_use]
 mod encoding;
@@ -58,7 +55,7 @@ pub use self::ratio::Ratio;
 
 mod pad;
 pub use self::pad::*;
-pub use Padding::None as NoPad;
+pub use Padding::Forbidden as NoPad;
 
 mod buf;
 pub use self::buf::*;
@@ -72,6 +69,7 @@ pub use self::base64::*;
 mod base32;
 pub use self::base32::*;
 
+#[cfg(doc)]
 pub mod incremental;
 
 //----------------------------------------------------------------
@@ -138,8 +136,13 @@ impl<'a, E: Encoding> fmt::Display for Display<'a, E> {
 
 //----------------------------------------------------------------
 
+mod sealed {
+	pub trait Sealed {}
+}
+use sealed::Sealed;
+
 /// Data encoding.
-pub trait Encoding {
+pub trait Encoding: Sealed {
 	/// Encoding ratio of decoded to encoded bytes.
 	const RATIO: Ratio;
 

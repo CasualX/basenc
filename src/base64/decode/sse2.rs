@@ -18,9 +18,7 @@ pub unsafe fn decode(mut string: &[u8], base: &Base64, pad: Padding, mut dest: *
 
 		let Ok(values) = lookup(block, base)
 		else {
-			// Handle errors and padding with the scalar code path
-			dest = scalar::decode(&string[..16], base, pad, dest)?;
-			string = &string[16..];
+			dest = scalar::decode_chunk(&mut string, base, pad, dest)?;
 			continue;
 		};
 

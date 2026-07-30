@@ -3,15 +3,19 @@ use super::Encoding;
 /// Padding policy.
 #[derive(Copy, Clone, Debug, Default, Eq, PartialEq)]
 pub enum Padding {
-	/// No padding.
-	None,
-	/// Optional padding.
+	/// Padding is not emitted while encoding and rejected while decoding.
+	Forbidden,
+	/// Padding is not emitted while encoding and accepted at the end while decoding.
 	///
-	/// Padding accepted while decoding, not added while encoding.
+	/// Unpadded input is also accepted.
 	#[default]
 	Optional,
-	/// Strict padding.
-	Strict,
+	/// Padding is emitted while encoding and required while decoding when needed.
+	Required,
+	/// Padding is not emitted while encoding and accepted between encoded segments while decoding.
+	///
+	/// Each segment must use canonical padding. Unpadded input and padding at the end are also accepted.
+	Internal,
 }
 
 /// Encoding with explicit padding policy.

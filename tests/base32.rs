@@ -8,7 +8,7 @@ fn roundtrip(input: &[u8], encoding: &impl Encoding, expected: &str) {
 
 #[test]
 fn rfc4648() {
-	let base32std = Base32Std.pad(Padding::Strict);
+	let base32std = Base32Std.pad(Padding::Required);
 	roundtrip(b"", &base32std, "");
 	roundtrip(b"f", &base32std, "MY======");
 	roundtrip(b"fo", &base32std, "MZXQ====");
@@ -16,7 +16,7 @@ fn rfc4648() {
 	roundtrip(b"foob", &base32std, "MZXW6YQ=");
 	roundtrip(b"fooba", &base32std, "MZXW6YTB");
 	roundtrip(b"foobar", &base32std, "MZXW6YTBOI======");
-	let base32hex = Base32Hex.pad(Padding::Strict);
+	let base32hex = Base32Hex.pad(Padding::Required);
 	roundtrip(b"", &base32hex, "");
 	roundtrip(b"f", &base32hex, "CO======");
 	roundtrip(b"fo", &base32hex, "CPNG====");
@@ -24,6 +24,32 @@ fn rfc4648() {
 	roundtrip(b"foob", &base32hex, "CPNMUOG=");
 	roundtrip(b"fooba", &base32hex, "CPNMUOJ1");
 	roundtrip(b"foobar", &base32hex, "CPNMUOJ1E8======");
+}
+
+#[test]
+fn padding_policies() {
+	let forbidden = Base32Std.pad(Padding::Forbidden);
+	assert_eq!(forbidden.encode(b"f"), "MY");
+	assert_eq!(forbidden.decode("MY"), Ok(b"f".to_vec()));
+	assert_eq!(forbidden.decode("MY======"), Err(Error::InvalidCharacter));
+
+	let optional = Base32Std.pad(Padding::Optional);
+	assert_eq!(optional.encode(b"f"), "MY");
+	assert_eq!(optional.decode("MY"), Ok(b"f".to_vec()));
+	assert_eq!(optional.decode("MY======"), Ok(b"f".to_vec()));
+	assert_eq!(optional.decode("MY======MZXQ===="), Err(Error::InvalidCharacter));
+
+	let required = Base32Std.pad(Padding::Required);
+	assert_eq!(required.encode(b"f"), "MY======");
+	assert_eq!(required.decode("MY"), Err(Error::IncorrectLength));
+	assert_eq!(required.decode("MY======"), Ok(b"f".to_vec()));
+	assert_eq!(required.decode("MY======MZXQ===="), Err(Error::InvalidCharacter));
+
+	let internal = Base32Std.pad(Padding::Internal);
+	assert_eq!(internal.encode(b"f"), "MY");
+	assert_eq!(internal.decode("MY"), Ok(b"f".to_vec()));
+	assert_eq!(internal.decode("MY======"), Ok(b"f".to_vec()));
+	assert_eq!(internal.decode("MY======MZXQ===="), Ok(b"ffo".to_vec()));
 }
 
 fn smash(encoding: &impl Encoding, input_buf: &mut [u8]) {

@@ -59,7 +59,7 @@ fn cwgem_test_base64_rb() {
 	roundtrip(b"\xFF\xFF\xFF", &Base64Std, "////");
 	roundtrip(b"\xff\xef", &Base64Std, "/+8=");
 
-	let base64std_strict = Base64Std.pad(Padding::Strict);
+	let base64std_strict = Base64Std.pad(Padding::Required);
 	error("^", &base64std_strict, Error::IncorrectLength);
 	error("A", &base64std_strict, Error::IncorrectLength);
 	error("A^", &base64std_strict, Error::IncorrectLength);
@@ -80,6 +80,41 @@ fn cwgem_test_base64_rb() {
 	roundtrip(b"\xFF\xFF", &Base64Url, "__8");
 	roundtrip(b"\xFF\xFF\xFF", &Base64Url, "____");
 	roundtrip(b"\xff\xef", &Base64Url, "_-8");
+}
+
+#[test]
+fn padding_policies() {
+	let forbidden = Base64Std.pad(Padding::Forbidden);
+	assert_eq!(forbidden.encode(b"f"), "Zg");
+	assert_eq!(forbidden.decode("Zg"), Ok(b"f".to_vec()));
+	assert_eq!(forbidden.decode("Zg=="), Err(Error::InvalidCharacter));
+
+	let optional = Base64Std.pad(Padding::Optional);
+	assert_eq!(optional.encode(b"f"), "Zg");
+	assert_eq!(optional.decode("Zg"), Ok(b"f".to_vec()));
+	assert_eq!(optional.decode("Zg=="), Ok(b"f".to_vec()));
+	assert_eq!(optional.decode("Zg==Zm8="), Err(Error::InvalidCharacter));
+
+	let required = Base64Std.pad(Padding::Required);
+	assert_eq!(required.encode(b"f"), "Zg==");
+	assert_eq!(required.decode("Zg"), Err(Error::IncorrectLength));
+	assert_eq!(required.decode("Zg=="), Ok(b"f".to_vec()));
+	assert_eq!(required.decode("Zg==Zm8="), Err(Error::InvalidCharacter));
+
+	let internal = Base64Std.pad(Padding::Internal);
+	assert_eq!(internal.encode(b"f"), "Zg");
+	assert_eq!(internal.decode("Zg"), Ok(b"f".to_vec()));
+	assert_eq!(internal.decode("Zg=="), Ok(b"f".to_vec()));
+	assert_eq!(internal.decode("Zg==Zm8="), Ok(b"ffo".to_vec()));
+
+	// The first padded segment ends exactly at a SIMD block boundary.
+	let segmented = "Zm9vYmFyYmF6Zg==Zm8=";
+	assert_eq!(optional.decode(segmented), Err(Error::InvalidCharacter));
+	assert_eq!(internal.decode(segmented), Ok(b"foobarbazffo".to_vec()));
+
+	// SIMD decoding can resume immediately after an internally padded segment.
+	let segmented = "Zg==YWJjZGVmZ2hpamts";
+	assert_eq!(internal.decode(segmented), Ok(b"fabcdefghijkl".to_vec()));
 }
 
 #[test]

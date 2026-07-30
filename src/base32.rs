@@ -41,6 +41,8 @@ impl Base32 {
 	}
 }
 
+impl Sealed for Base32 {}
+
 impl Encoding for Base32 {
 	const RATIO: Ratio = RATIO;
 
@@ -54,6 +56,8 @@ impl Encoding for Base32 {
 		decode(string, self, Padding::Optional, buffer)
 	}
 }
+
+impl Sealed for WithPad<'_, Base32> {}
 
 impl Encoding for WithPad<'_, Base32> {
 	const RATIO: Ratio = RATIO;

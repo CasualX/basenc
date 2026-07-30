@@ -88,6 +88,8 @@ impl Base64 {
 	}
 }
 
+impl Sealed for Base64 {}
+
 impl Encoding for Base64 {
 	const RATIO: Ratio = RATIO;
 
@@ -101,6 +103,8 @@ impl Encoding for Base64 {
 		decode(string, self, Padding::Optional, buffer)
 	}
 }
+
+impl Sealed for WithPad<'_, Base64> {}
 
 impl Encoding for WithPad<'_, Base64> {
 	const RATIO: Ratio = RATIO;

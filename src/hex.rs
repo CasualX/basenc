@@ -8,6 +8,8 @@ const RATIO: Ratio = Ratio { decoded: 1, encoded: 2 };
 #[derive(Clone, Debug)]
 pub struct LowerHex;
 
+impl Sealed for LowerHex {}
+
 impl Encoding for LowerHex {
 	const RATIO: Ratio = RATIO;
 
@@ -57,6 +59,8 @@ impl_encoding!(LowerHex,
 /// Decoding accepts both lower- and upper-case letters.
 #[derive(Clone, Debug)]
 pub struct UpperHex;
+
+impl Sealed for UpperHex {}
 
 impl Encoding for UpperHex {
 	const RATIO: Ratio = RATIO;
