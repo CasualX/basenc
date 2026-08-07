@@ -9,4 +9,7 @@ impl_arch_encode! {
 		avx2: "avx2" is_x86_feature_detected!("avx2");
 		ssse3: "ssse3" is_x86_feature_detected!("ssse3");
 	},
+	(all(target_arch = "aarch64", target_endian = "little")) => {
+		neon: "neon" std::arch::is_aarch64_feature_detected!("neon");
+	},
 }

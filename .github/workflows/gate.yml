@@ -109,3 +109,22 @@ jobs:
         env:
           RUSTFLAGS: ${{ matrix.rustflags }}
         run: cargo test --target ${{ matrix.target }} --no-default-features --features ${{ matrix.features }}
+
+  aarch64:
+    runs-on: ubuntu-24.04-arm
+    name: AArch64 NEON
+
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v7
+
+      - name: Install toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Run tests with runtime detection
+        run: cargo test
+
+      - name: Run tests with static NEON
+        env:
+          RUSTFLAGS: -C target-feature=+neon
+        run: cargo test --no-default-features --features std

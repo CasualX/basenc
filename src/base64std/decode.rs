@@ -10,6 +10,9 @@ impl_arch_decode! {
 		ssse3: "ssse3" is_x86_feature_detected!("ssse3");
 		sse2: "sse2" is_x86_feature_detected!("sse2");
 	},
+	(all(target_arch = "aarch64", target_endian = "little")) => {
+		neon: "neon" std::arch::is_aarch64_feature_detected!("neon");
+	},
 	(all(target_arch = "wasm32", target_feature = "simd128")) => {
 		simd128: "simd128" cfg!(target_feature = "simd128");
 	},
