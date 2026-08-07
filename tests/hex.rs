@@ -50,3 +50,47 @@ fn random() {
 	smash(&LowerHex, &mut stack_buf);
 	smash(&UpperHex, &mut stack_buf);
 }
+
+#[test]
+fn simd_character_validation() {
+	for len in [16, 32, 64, 96] {
+		let mut string = vec![b'0'; len];
+		let mut output = [0u8; 48];
+
+		for index in 0..len {
+			for byte in 0..=u8::MAX {
+				let valid = byte.is_ascii_hexdigit();
+				string[index] = byte;
+				assert_eq!(
+					LowerHex.decode_bytes_into(&string, &mut output).is_ok(),
+					valid,
+					"length {len}, index {index}, byte {byte:#04x}",
+				);
+			}
+			string[index] = b'0';
+		}
+	}
+}
+
+#[test]
+fn simd_stores_stay_within_estimated_output() {
+	const CANARY: u8 = 0xa5;
+
+	for len in 0usize..=256 {
+		let input: Vec<_> = (0..len).map(|i| (i as u8).wrapping_mul(37)).collect();
+		let encoded_capacity = len * 2;
+		let mut encoded_storage = [CANARY; 520];
+		let encoded = LowerHex
+			.encode_into(&input, &mut encoded_storage[..encoded_capacity])
+			.to_owned();
+		assert!(encoded_storage[encoded_capacity..].iter().all(|&byte| byte == CANARY));
+
+		let decoded_capacity = encoded.len() / 2;
+		let mut decoded_storage = [CANARY; 260];
+		let decoded = LowerHex
+			.decode_into(&encoded, &mut decoded_storage[..decoded_capacity])
+			.unwrap();
+		assert_eq!(decoded, input);
+		assert!(decoded_storage[decoded_capacity..].iter().all(|&byte| byte == CANARY));
+	}
+}

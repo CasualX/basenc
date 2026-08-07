@@ -9,12 +9,8 @@ use super::*;
 #[target_feature(enable = "sse2")]
 unsafe fn hex2ascii(v: __m128i, base: u8) -> __m128i {
 	let mask = _mm_cmpgt_epi8(v, _mm_set1_epi8(9));
-
-	let ascii_base = _mm_or_si128(
-		_mm_andnot_si128(mask, _mm_set1_epi8(b'0' as i8)),
-		_mm_and_si128(mask, _mm_set1_epi8(base as i8 - 10)),
-	);
-	return _mm_add_epi8(ascii_base, v);
+	let adjustment = _mm_and_si128(mask, _mm_set1_epi8((base - b'0' - 10) as i8));
+	_mm_add_epi8(_mm_add_epi8(v, _mm_set1_epi8(b'0' as i8)), adjustment)
 }
 
 #[target_feature(enable = "sse2")]
