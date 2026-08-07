@@ -63,7 +63,7 @@ pub unsafe fn decode(mut string: &[u8], base: &Base64, pad: Padding, mut dest: *
 	}
 
 	if !string.is_empty() {
-		if matches!(pad, Padding::Required) {
+		if pad.decode_requires_padding() {
 			return Err(crate::Error::new(crate::ErrorKind::IncorrectLength, input_len));
 		}
 
@@ -87,8 +87,8 @@ pub unsafe fn decode_chunk(string: &mut &[u8], base: &Base64, pad: Padding, dest
 	};
 	let chunk = [c0, c1, c2, c3];
 
-	let dest = if !matches!(pad, Padding::Forbidden) && chunk[3] == PAD_CHAR {
-		if !matches!(pad, Padding::Internal)
+	let dest = if pad.decode_allows_padding() && chunk[3] == PAD_CHAR {
+		if !pad.decode_allows_internal_padding()
 			&& let Some(offset) = rest.iter().position(|&byte| byte != PAD_CHAR)
 		{
 			return Err(crate::Error::new(crate::ErrorKind::InvalidCharacter, 4 + offset));

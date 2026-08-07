@@ -35,12 +35,12 @@ impl Encoding for Base64Std {
 
 	#[inline]
 	fn encode_bytes_into<B: EncodeBuf>(&self, bytes: &[u8], buffer: B) -> B::Output {
-		encode(bytes, Padding::Optional, buffer)
+		encode(bytes, Padding::Standard, buffer)
 	}
 
 	#[inline]
 	fn decode_bytes_into<B: DecodeBuf>(&self, string: &[u8], buffer: B) -> Result<B::Output, Error> {
-		decode(string, Padding::Optional, buffer)
+		decode(string, Padding::Standard, buffer)
 	}
 }
 
@@ -65,7 +65,7 @@ impl Base64Std {
 		encode: [
 			/// ```
 			/// let encoded = basenc::Base64Std.encode(b"hello world");
-			/// assert_eq!(encoded, "aGVsbG8gd29ybGQ");
+			/// assert_eq!(encoded, "aGVsbG8gd29ybGQ=");
 			/// ```
 		],
 		decode: [
@@ -78,7 +78,7 @@ impl Base64Std {
 			/// ```
 			/// let mut stack_buf = [0u8; 16];
 			/// let encoded = basenc::Base64Std.encode_into(b"hello world", &mut stack_buf);
-			/// assert_eq!(encoded, "aGVsbG8gd29ybGQ");
+			/// assert_eq!(encoded, "aGVsbG8gd29ybGQ=");
 			/// ```
 		],
 		decode_into: [

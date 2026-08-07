@@ -6,6 +6,7 @@ fn parse_pad(i: i32) -> basenc::Padding {
 		1 => basenc::Padding::Optional,
 		2 => basenc::Padding::Required,
 		3 => basenc::Padding::Internal,
+		4 => basenc::Padding::Standard,
 		_ => unreachable!(),
 	}
 }
@@ -17,7 +18,7 @@ proptest! {
 	}
 
 	#[test]
-	fn base64_encode(s in "\\PC*", pad in 0..4) {
+	fn base64_encode(s in "\\PC*", pad in 0..5) {
 		let encoding = basenc::Base64Std.pad(parse_pad(pad));
 		let encoded = encoding.encode(&s.as_bytes());
 		let decoded = encoding.decode(&encoded).unwrap();
@@ -30,7 +31,7 @@ proptest! {
 	}
 
 	#[test]
-	fn base64url_encode(s in "\\PC*", pad in 0..4) {
+	fn base64url_encode(s in "\\PC*", pad in 0..5) {
 		let encoding = basenc::Base64Url.pad(parse_pad(pad));
 		let encoded = encoding.encode(&s.as_bytes());
 		let decoded = encoding.decode(&encoded).unwrap();
@@ -43,7 +44,7 @@ proptest! {
 	}
 
 	#[test]
-	fn base32_encode(s in "\\PC*", pad in 0..4) {
+	fn base32_encode(s in "\\PC*", pad in 0..5) {
 		let encoding = basenc::Base32Std.pad(parse_pad(pad));
 		let encoded = encoding.encode(&s.as_bytes());
 		let decoded = encoding.decode(&encoded).unwrap();
@@ -56,7 +57,7 @@ proptest! {
 	}
 
 	#[test]
-	fn base32hex_encode(s in "\\PC*", pad in 0..4) {
+	fn base32hex_encode(s in "\\PC*", pad in 0..5) {
 		let encoding = basenc::Base32Hex.pad(parse_pad(pad));
 		let encoded = encoding.encode(&s.as_bytes());
 		let decoded = encoding.decode(&encoded).unwrap();

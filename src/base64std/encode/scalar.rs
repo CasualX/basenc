@@ -24,7 +24,7 @@ unsafe fn encode_2bytes([b0, b1]: &[u8; 2], pad: Padding, dest: *mut u8) -> *mut
 	*dest.add(1) = CHARSET[((b0 << 4 | b1 >> 4) & 0x3f) as usize];
 	*dest.add(2) = CHARSET[(b1 << 2 & 0x3f) as usize];
 
-	if matches!(pad, Padding::Required) {
+	if pad.encode_padded() {
 		*dest.add(3) = PAD_CHAR;
 		dest.add(4)
 	}
@@ -38,7 +38,7 @@ unsafe fn encode_1byte([b0]: &[u8; 1], pad: Padding, dest: *mut u8) -> *mut u8 {
 	*dest.add(0) = CHARSET[(b0 >> 2) as usize];
 	*dest.add(1) = CHARSET[(b0 << 4 & 0x3f) as usize];
 
-	if matches!(pad, Padding::Required) {
+	if pad.encode_padded() {
 		*dest.add(2) = PAD_CHAR;
 		*dest.add(3) = PAD_CHAR;
 		dest.add(4)

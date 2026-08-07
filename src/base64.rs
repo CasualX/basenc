@@ -5,7 +5,7 @@ const PAD_CHAR: u8 = b'=';
 
 /// Base64 alphabet.
 ///
-/// Encoding and decoding directly with this type use [`Padding::Optional`].
+/// Encoding and decoding directly with this type use [`Padding::Standard`].
 /// Use [`Base64::pad`] to select a different padding policy.
 #[derive(Clone, Debug)]
 #[allow(dead_code)]
@@ -98,12 +98,12 @@ impl Encoding for Base64 {
 
 	#[inline]
 	fn encode_bytes_into<B: EncodeBuf>(&self, bytes: &[u8], buffer: B) -> B::Output {
-		encode(bytes, self, Padding::Optional, buffer)
+		encode(bytes, self, Padding::Standard, buffer)
 	}
 
 	#[inline]
 	fn decode_bytes_into<B: DecodeBuf>(&self, string: &[u8], buffer: B) -> Result<B::Output, Error> {
-		decode(string, self, Padding::Optional, buffer)
+		decode(string, self, Padding::Standard, buffer)
 	}
 }
 
@@ -128,7 +128,7 @@ impl Base64 {
 		encode: [
 			/// ```
 			/// let encoded = basenc::Base64Std.encode(b"hello world");
-			/// assert_eq!(encoded, "aGVsbG8gd29ybGQ");
+			/// assert_eq!(encoded, "aGVsbG8gd29ybGQ=");
 			/// ```
 		],
 		decode: [
@@ -141,7 +141,7 @@ impl Base64 {
 			/// ```
 			/// let mut stack_buf = [0u8; 16];
 			/// let encoded = basenc::Base64Std.encode_into(b"hello world", &mut stack_buf);
-			/// assert_eq!(encoded, "aGVsbG8gd29ybGQ");
+			/// assert_eq!(encoded, "aGVsbG8gd29ybGQ=");
 			/// ```
 		],
 		decode_into: [
@@ -160,8 +160,11 @@ impl Base64 {
 /// Base64 url-safe charset.
 ///
 /// The alphabet is `A-Za-z0-9-_`.
+/// Encoding omits padding by default; decoding accepts padded and unpadded input.
 #[allow(non_upper_case_globals)]
-pub static Base64Url: Base64 = Base64::new(b'-', b'_');
+pub static Base64Url: WithPad<'static, Base64> = WithPad::new(&BASE64_URL, Padding::Optional);
+
+static BASE64_URL: Base64 = Base64::new(b'-', b'_');
 
 //----------------------------------------------------------------
 // Encoding

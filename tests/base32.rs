@@ -39,6 +39,19 @@ fn padding_policies() {
 	assert_eq!(optional.decode("MY======"), Ok(b"f".to_vec()));
 	assert_eq!(optional.decode("MY======MZXQ===="), Err(Error::new(ErrorKind::InvalidCharacter, 8)));
 
+	let standard = Base32Std.pad(Padding::Standard);
+	assert_eq!(standard.encode(b"f"), "MY======");
+	assert_eq!(standard.decode("MY"), Ok(b"f".to_vec()));
+	assert_eq!(standard.decode("MY======"), Ok(b"f".to_vec()));
+	assert_eq!(standard.decode("MY======MZXQ===="), Err(Error::new(ErrorKind::InvalidCharacter, 8)));
+	assert_eq!(Base32Std.encode(b"f"), "MY======");
+	assert_eq!(Base32Std.decode("MY"), Ok(b"f".to_vec()));
+	assert_eq!(Base32Hex.encode(b"f"), "CO======");
+	assert_eq!(Base32Z.encode(b"f"), "ca");
+	assert_eq!(Base32Z.decode("ca"), Ok(b"f".to_vec()));
+	assert_eq!(Base32Z.decode("ca======"), Err(Error::new(ErrorKind::InvalidCharacter, 2)));
+	assert_eq!(Base32Z.pad(Padding::Standard).encode(b"f"), "ca======");
+
 	let required = Base32Std.pad(Padding::Required);
 	assert_eq!(required.encode(b"f"), "MY======");
 	assert_eq!(required.decode("MY"), Err(Error::new(ErrorKind::IncorrectLength, 2)));
@@ -89,7 +102,14 @@ fn fully_dynamic_alphabet() {
 		let expected: Vec<_> = Base32Std
 			.encode(&input)
 			.bytes()
-			.map(|byte| charset[standard.iter().position(|&candidate| candidate == byte).unwrap()])
+			.map(|byte| {
+				if byte == b'=' {
+					byte
+				}
+				else {
+					charset[standard.iter().position(|&candidate| candidate == byte).unwrap()]
+				}
+			})
 			.collect();
 		let encoded = dynamic.encode_into(&input, String::new());
 		assert_eq!(encoded.as_bytes(), expected, "encoded length {len}");

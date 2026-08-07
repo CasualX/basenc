@@ -26,7 +26,7 @@ unsafe fn encode_4bytes([b0, b1, b2, b3]: &[u8; 4], base: &Base32, pad: Padding,
 	*dest.add(5) = base.charset[(b3 >> 2 & 0x1F) as usize];
 	*dest.add(6) = base.charset[((b3 << 3) & 0x1F) as usize];
 
-	if matches!(pad, Padding::Required) {
+	if pad.encode_padded() {
 		*dest.add(7) = PAD_CHAR;
 		dest.add(8)
 	}
@@ -44,7 +44,7 @@ unsafe fn encode_3bytes([b0, b1, b2]: &[u8; 3], base: &Base32, pad: Padding, des
 	*dest.add(3) = base.charset[((b1 << 4 | b2 >> 4) & 0x1F) as usize];
 	*dest.add(4) = base.charset[((b2 << 1) & 0x1F) as usize];
 
-	if matches!(pad, Padding::Required) {
+	if pad.encode_padded() {
 		*dest.add(5) = PAD_CHAR;
 		*dest.add(6) = PAD_CHAR;
 		*dest.add(7) = PAD_CHAR;
@@ -63,7 +63,7 @@ unsafe fn encode_2bytes([b0, b1]: &[u8; 2], base: &Base32, pad: Padding, dest: *
 	*dest.add(2) = base.charset[(b1 >> 1 & 0x1F) as usize];
 	*dest.add(3) = base.charset[((b1 << 4) & 0x1F) as usize];
 
-	if matches!(pad, Padding::Required) {
+	if pad.encode_padded() {
 		*dest.add(4) = PAD_CHAR;
 		*dest.add(5) = PAD_CHAR;
 		*dest.add(6) = PAD_CHAR;
@@ -81,7 +81,7 @@ unsafe fn encode_1byte([b0]: &[u8; 1], base: &Base32, pad: Padding, dest: *mut u
 	*dest.add(0) = base.charset[(b0 >> 3) as usize];
 	*dest.add(1) = base.charset[((b0 << 2) & 0x1F) as usize];
 
-	if matches!(pad, Padding::Required) {
+	if pad.encode_padded() {
 		*dest.add(2) = PAD_CHAR;
 		*dest.add(3) = PAD_CHAR;
 		*dest.add(4) = PAD_CHAR;

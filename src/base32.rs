@@ -5,7 +5,7 @@ const PAD_CHAR: u8 = b'=';
 
 /// Base32 alphabet.
 ///
-/// Encoding and decoding directly with this type use [`Padding::Optional`].
+/// Encoding and decoding directly with this type use [`Padding::Standard`].
 /// Use [`Base32::pad`] to select a different padding policy.
 #[derive(Clone, Debug)]
 pub struct Base32 {
@@ -59,12 +59,12 @@ impl Encoding for Base32 {
 
 	#[inline]
 	fn encode_bytes_into<B: EncodeBuf>(&self, bytes: &[u8], buffer: B) -> B::Output {
-		encode(bytes, self, Padding::Optional, buffer)
+		encode(bytes, self, Padding::Standard, buffer)
 	}
 
 	#[inline]
 	fn decode_bytes_into<B: DecodeBuf>(&self, string: &[u8], buffer: B) -> Result<B::Output, Error> {
-		decode(string, self, Padding::Optional, buffer)
+		decode(string, self, Padding::Standard, buffer)
 	}
 }
 
@@ -105,8 +105,9 @@ pub static Base32Hex: Base32 = Base32::new(b"0123456789ABCDEFGHIJKLMNOPQRSTUV");
 /// z-base-32 alphabet.
 ///
 /// The alphabet is `ybndrfg8ejkmcpqxot1uwisza345h769`.
+/// Padding is omitted while encoding and rejected while decoding by default.
 #[allow(non_upper_case_globals)]
-pub static Base32Z: Base32 = Base32::new(b"ybndrfg8ejkmcpqxot1uwisza345h769");
+pub static Base32Z: WithPad<'static, Base32> = WithPad::new(&Base32::new(b"ybndrfg8ejkmcpqxot1uwisza345h769"), Padding::Forbidden);
 
 //----------------------------------------------------------------
 // Encoding

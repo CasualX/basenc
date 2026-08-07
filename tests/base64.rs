@@ -2,7 +2,7 @@ use basenc::*;
 
 #[track_caller]
 fn roundtrip(input: &[u8], encoding: &impl Encoding, expected: &str) {
-	assert_eq!(expected.trim_end_matches("="), encoding.encode_bytes_into(input, String::new()));
+	assert_eq!(expected, encoding.encode_bytes_into(input, String::new()));
 	assert_eq!(Ok(input), encoding.decode_bytes_into(expected.as_bytes(), Vec::new()).as_deref());
 }
 
@@ -80,6 +80,7 @@ fn cwgem_test_base64_rb() {
 	roundtrip(b"\xFF\xFF", &Base64Url, "__8");
 	roundtrip(b"\xFF\xFF\xFF", &Base64Url, "____");
 	roundtrip(b"\xff\xef", &Base64Url, "_-8");
+	assert_eq!(Base64Url.decode("_w=="), Ok(b"\xff".to_vec()));
 }
 
 #[test]
@@ -96,6 +97,19 @@ fn padding_policies() {
 	assert_eq!(optional.decode_bytes_into(b"Zg", Vec::new()), Ok(b"f".to_vec()));
 	assert_eq!(optional.decode("Zg=="), Ok(b"f".to_vec()));
 	assert_eq!(optional.decode("Zg==Zm8="), Err(Error::new(ErrorKind::InvalidCharacter, 4)));
+
+	let standard = Base64Std.pad(Padding::Standard);
+	assert_eq!(standard.encode(b"f"), "Zg==");
+	assert_eq!(standard.decode("Zg"), Ok(b"f".to_vec()));
+	assert_eq!(standard.decode("Zg=="), Ok(b"f".to_vec()));
+	assert_eq!(standard.decode("Zg==Zm8="), Err(Error::new(ErrorKind::InvalidCharacter, 4)));
+	assert_eq!(Padding::default(), Padding::Standard);
+	assert_eq!(Base64Std.encode(b"f"), "Zg==");
+	assert_eq!(Base64Std.decode("Zg"), Ok(b"f".to_vec()));
+	assert_eq!(Base64::new(b'+', b'/').encode(b"f"), "Zg==");
+	assert_eq!(Base64Url.encode(b"f"), "Zg");
+	assert_eq!(Base64Url.decode("Zg=="), Ok(b"f".to_vec()));
+	assert_eq!(Base64Url.pad(Padding::Standard).encode(b"f"), "Zg==");
 
 	let required = Base64Std.pad(Padding::Required);
 	assert_eq!(required.encode(b"f"), "Zg==");
@@ -217,7 +231,7 @@ fn dedicated_standard_matches_generic_alphabet() {
 	assert_eq!(core::mem::size_of::<Base64Std>(), 0);
 	let generic = Base64::new(b'+', b'/');
 
-	for pad in [Padding::Forbidden, Padding::Optional, Padding::Required, Padding::Internal] {
+	for pad in [Padding::Forbidden, Padding::Optional, Padding::Standard, Padding::Required, Padding::Internal] {
 		let dedicated = Base64Std.pad(pad);
 		let generic = generic.pad(pad);
 		for len in 0usize..=256 {

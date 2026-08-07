@@ -13,7 +13,7 @@ Encoding:
 
 ```
 let encoded = basenc::Base64Std.encode(b"hello world");
-assert_eq!(encoded, "aGVsbG8gd29ybGQ");
+assert_eq!(encoded, "aGVsbG8gd29ybGQ=");
 ```
 
 Decoding:
