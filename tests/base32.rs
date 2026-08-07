@@ -73,3 +73,90 @@ fn random() {
 	smash(&Base32Hex.pad(NoPad), &mut stack_buf);
 	smash(&Base32Z.pad(NoPad), &mut stack_buf);
 }
+
+#[test]
+fn fully_dynamic_alphabet() {
+	// Exercise every ASCII high-nibble row used by the SIMD reverse lookup.
+	let charset = [
+		0, 1, 2, 3, 16, 17, 18, 19, 32, 33, 34, 35, 48, 49, 50, 51,
+		64, 65, 66, 67, 80, 81, 82, 83, 96, 97, 98, 99, 112, 113, 114, 115,
+	];
+	let dynamic = Base32::new(&charset);
+	let standard = b"ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+
+	for len in 0usize..=257 {
+		let input: Vec<_> = (0..len).map(|i| i.wrapping_mul(73) as u8).collect();
+		let expected: Vec<_> = Base32Std
+			.encode(&input)
+			.bytes()
+			.map(|byte| charset[standard.iter().position(|&candidate| candidate == byte).unwrap()])
+			.collect();
+		let encoded = dynamic.encode_into(&input, String::new());
+		assert_eq!(encoded.as_bytes(), expected, "encoded length {len}");
+		assert_eq!(
+			Encoding::decode_into(&dynamic, encoded.as_bytes(), Vec::new()).as_deref(),
+			Ok(input.as_slice()),
+			"decoded length {len}"
+		);
+
+		let expected_padded: Vec<_> = Base32Std
+			.pad(Padding::Required)
+			.encode(&input)
+			.bytes()
+			.map(|byte| {
+				if byte == b'=' {
+					byte
+				}
+				else {
+					charset[standard.iter().position(|&candidate| candidate == byte).unwrap()]
+				}
+			})
+			.collect();
+		let dynamic_padded = dynamic.pad(Padding::Required);
+		let encoded_padded = dynamic_padded.encode_into(&input, String::new());
+		assert_eq!(encoded_padded.as_bytes(), expected_padded, "padded encoded length {len}");
+		assert_eq!(
+			Encoding::decode_into(&dynamic_padded, encoded_padded.as_bytes(), Vec::new()).as_deref(),
+			Ok(input.as_slice()),
+			"padded decoded length {len}"
+		);
+	}
+}
+
+#[test]
+fn simd_character_validation() {
+	let input: Vec<_> = (0usize..40).map(|i| i.wrapping_mul(37) as u8).collect();
+	let encoded = Base32Z.pad(NoPad).encode(&input).into_bytes();
+
+	for index in 0..encoded.len() {
+		let mut invalid = encoded.clone();
+		invalid[index] = b'=';
+		assert_eq!(
+			Encoding::decode_into(&Base32Z.pad(NoPad), &invalid, Vec::new()),
+			Err(Error::InvalidCharacter),
+			"index {index}"
+		);
+	}
+
+	let mut non_ascii = encoded;
+	non_ascii[31] = 0x80;
+	assert_eq!(Encoding::decode_into(&Base32Z, &non_ascii, Vec::new()), Err(Error::InvalidCharacter));
+}
+
+#[test]
+fn simd_stores_stay_within_estimated_output() {
+	for len in 0usize..=65 {
+		let input: Vec<_> = (0..len).map(|i| i.wrapping_mul(101) as u8).collect();
+		let encoded_len = Base32::RATIO.estimate_encoded_len(len);
+		let mut encoded = vec![0xa5; encoded_len + 1];
+		let encoded_output = Base32Z.encode_into(&input, &mut encoded[..encoded_len]);
+		let encoded_output = encoded_output.as_bytes().to_vec();
+		assert_eq!(encoded[encoded_len], 0xa5, "encode length {len}");
+
+		let decoded_len = Base32::RATIO.estimate_decoded_len(encoded_output.len());
+		let mut decoded = vec![0xa5; decoded_len + 1];
+		let decoded_output = Encoding::decode_into(&Base32Z, &encoded_output, &mut decoded[..decoded_len]).unwrap();
+		assert_eq!(decoded_output, input, "decode length {len}");
+		assert_eq!(decoded[decoded_len], 0xa5, "decode canary length {len}");
+	}
+}

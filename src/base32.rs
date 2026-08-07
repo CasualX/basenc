@@ -11,6 +11,12 @@ const PAD_CHAR: u8 = b'=';
 pub struct Base32 {
 	charset: [u8; 32],
 	lut: [u8; 128],
+	/// Bitset of the populated 16-byte rows in `lut`.
+	///
+	/// The SIMD decoder uses this to skip empty rows while retaining support for
+	/// arbitrary ASCII alphabets.
+	#[allow(dead_code)] // Used only by SIMD implementations.
+	lut_rows: u8,
 }
 
 impl Base32 {
@@ -21,6 +27,7 @@ impl Base32 {
 	/// Panics if the alphabet contains `=`, duplicate or non-ASCII characters.
 	pub const fn new(&charset: &[u8; 32]) -> Self {
 		let mut lut = [255; 128];
+		let mut lut_rows = 0;
 		let mut i = 0;
 		while i < charset.len() {
 			if charset[i] == PAD_CHAR {
@@ -33,9 +40,10 @@ impl Base32 {
 				panic!("duplicate character in Base32 charset");
 			}
 			lut[charset[i] as usize] = i as u8;
+			lut_rows |= 1 << (charset[i] >> 4);
 			i += 1;
 		}
-		Base32 { charset, lut }
+		Base32 { charset, lut, lut_rows }
 	}
 
 	/// With explicit padding policy.
@@ -111,7 +119,7 @@ fn encode<B: EncodeBuf>(bytes: &[u8], base: &Base32, pad: Padding, mut buffer: B
 
 	unsafe {
 		let dest = buffer.allocate(dest_len);
-		let end = encode::encode(bytes, base, pad, dest);
+		let end = encode::encode_fn()(bytes, base, pad, dest);
 		let len = end.offset_from(dest) as usize;
 		buffer.commit(len)
 	}
@@ -128,7 +136,7 @@ fn decode<B: DecodeBuf>(string: &[u8], base: &Base32, pad: Padding, mut buffer: 
 
 	unsafe {
 		let dest = buffer.allocate(dest_len);
-		let end = decode::decode(string, base, pad, dest)?;
+		let end = decode::decode_fn()(string, base, pad, dest)?;
 		let len = end.offset_from(dest) as usize;
 		Ok(buffer.commit(len))
 	}
