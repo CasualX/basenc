@@ -3,7 +3,7 @@ name = "basenc"
 version = "0.2.3"
 authors = ["Casper <CasualX@users.noreply.github.com>"]
 edition = "2024"
-rust-version = "1.85"
+rust-version = "1.95"
 
 description = "Encoding and decoding hex, base64 and base32 with support for #[no_std]."
 documentation = "https://docs.rs/basenc/"
@@ -23,8 +23,5 @@ std = []
 simd-off = [] # Disable SIMD acceleration.
 simd-runtime = ["std"] # Enable runtime detection of SIMD support.
 
-[dependencies]
-cfg-if = "1.0"
-
 [dev-dependencies]
-urandom = "1.0.0-alpha.1"
+urandom = "1.0.0-alpha.2"

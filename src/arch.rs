@@ -7,14 +7,14 @@ macro_rules! impl_arch_decode {
 			$($target_feature:ident: $target_feature_lit:literal $target_feature_detect:expr;)*
 		},)*
 	) => {
-		cfg_if::cfg_if! {
-			if #[cfg(feature = "simd-off")] {
+		cfg_select! {
+			feature = "simd-off" => {
 				#[inline]
 				pub fn decode_fn() -> $signature {
 					scalar::decode
 				}
 			}
-			else if #[cfg(feature = "simd-runtime")] {
+			feature = "simd-runtime" => {
 				static DECODE: core::sync::atomic::AtomicPtr<()> = core::sync::atomic::AtomicPtr::new(core::ptr::null_mut());
 
 				#[inline]
@@ -28,9 +28,8 @@ macro_rules! impl_arch_decode {
 					decode
 				}
 
-				cfg_if::cfg_if! {
-					if #[cfg(any())] {}
-					$(else if #[cfg $target_arch] {
+				cfg_select! {
+					$(all $target_arch => {
 						$(mod $target_feature;)*
 
 						#[inline(never)]
@@ -44,7 +43,7 @@ macro_rules! impl_arch_decode {
 							}
 						}
 					})*
-					else {
+					_ => {
 						#[inline]
 						pub fn decode_detect() -> $signature {
 							scalar::decode
@@ -53,11 +52,10 @@ macro_rules! impl_arch_decode {
 				}
 
 			}
-			else {
-				cfg_if::cfg_if! {
-					if #[cfg(any())] {}
+			_ => {
+				cfg_select! {
 					$($(
-						else if #[cfg(all(all $target_arch, target_feature = $target_feature_lit))] {
+						all(all $target_arch, target_feature = $target_feature_lit) => {
 							mod $target_feature;
 
 							#[inline]
@@ -66,7 +64,7 @@ macro_rules! impl_arch_decode {
 							}
 						}
 					)*)*
-					else {
+					_ => {
 						#[inline]
 						pub fn decode_fn() -> $signature {
 							scalar::decode
@@ -85,14 +83,14 @@ macro_rules! impl_arch_encode {
 			$($target_feature:ident: $target_feature_lit:literal $target_feature_detect:expr;)*
 		},)*
 	) => {
-		cfg_if::cfg_if! {
-			if #[cfg(feature = "simd-off")] {
+		cfg_select! {
+			feature = "simd-off" => {
 				#[inline]
 				pub fn encode_fn() -> $signature {
 					scalar::encode
 				}
 			}
-			else if #[cfg(feature = "simd-runtime")] {
+			feature = "simd-runtime" => {
 				static ENCODE: core::sync::atomic::AtomicPtr<()> = core::sync::atomic::AtomicPtr::new(core::ptr::null_mut());
 
 				#[inline]
@@ -106,9 +104,8 @@ macro_rules! impl_arch_encode {
 					encode
 				}
 
-				cfg_if::cfg_if! {
-					if #[cfg(any())] {}
-					$(else if #[cfg $target_arch] {
+				cfg_select! {
+					$(all $target_arch => {
 						$(mod $target_feature;)*
 
 						#[inline(never)]
@@ -122,7 +119,7 @@ macro_rules! impl_arch_encode {
 							}
 						}
 					})*
-					else {
+					_ => {
 						#[inline]
 						pub fn encode_detect() -> $signature {
 							scalar::encode
@@ -131,11 +128,10 @@ macro_rules! impl_arch_encode {
 				}
 
 			}
-			else {
-				cfg_if::cfg_if! {
-					if #[cfg(any())] {}
+			_ => {
+				cfg_select! {
 					$($(
-						else if #[cfg(all(all $target_arch, target_feature = $target_feature_lit))] {
+						all(all $target_arch, target_feature = $target_feature_lit) => {
 							mod $target_feature;
 
 							#[inline]
@@ -144,7 +140,7 @@ macro_rules! impl_arch_encode {
 							}
 						}
 					)*)*
-					else {
+					_ => {
 						#[inline]
 						pub fn encode_fn() -> $signature {
 							scalar::encode
