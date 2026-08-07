@@ -28,11 +28,11 @@ unsafe fn decode_hex(v: __m256i) -> __m256i {
 
 #[inline]
 #[target_feature(enable = "avx2")]
-unsafe fn validate_hex(result: __m256i) -> Result<(), crate::Error> {
+unsafe fn validate_hex(result: __m256i) -> Result<(), crate::ErrorKind> {
 	let invalid = _mm256_subs_epu8(result, _mm256_set1_epi8(15));
 
 	if _mm256_testz_si256(invalid, invalid) == 0 {
-		return Err(crate::Error::InvalidCharacter);
+		return Err(crate::ErrorKind::InvalidCharacter);
 	}
 
 	Ok(())
@@ -40,7 +40,7 @@ unsafe fn validate_hex(result: __m256i) -> Result<(), crate::Error> {
 
 #[inline]
 #[target_feature(enable = "avx2")]
-unsafe fn decode_hex_16(v: __m128i) -> Result<__m128i, crate::Error> {
+unsafe fn decode_hex_16(v: __m128i) -> Result<__m128i, crate::ErrorKind> {
 	let digit = _mm_sub_epi8(
 		_mm_subs_epu8(
 			_mm_add_epi8(v, _mm_set1_epi8((0xff - b'9') as i8)),
@@ -59,7 +59,7 @@ unsafe fn decode_hex_16(v: __m128i) -> Result<__m128i, crate::Error> {
 	let invalid = _mm_subs_epu8(result, _mm_set1_epi8(15));
 
 	if _mm_testz_si128(invalid, invalid) == 0 {
-		return Err(crate::Error::InvalidCharacter);
+		return Err(crate::ErrorKind::InvalidCharacter);
 	}
 
 	Ok(result)
@@ -77,11 +77,14 @@ unsafe fn nibbles2bytes(a: __m256i, b: __m256i) -> __m256i {
 
 #[target_feature(enable = "avx2")]
 pub unsafe fn decode(mut string: &[u8], mut dest: *mut u8) -> Result<*mut u8, crate::Error> {
+	let input_len = string.len();
 	while string.len() >= 64 {
 		let src = string.as_ptr() as *const __m256i;
 		let a = decode_hex(_mm256_loadu_si256(src));
 		let b = decode_hex(_mm256_loadu_si256(src.add(1)));
-		validate_hex(_mm256_max_epu8(a, b))?;
+		if validate_hex(_mm256_max_epu8(a, b)).is_err() {
+			return scalar::decode(string, dest).map_err(|error| error.shifted(input_len - string.len()));
+		}
 		let bytes = nibbles2bytes(a, b);
 		_mm256_storeu_si256(dest as *mut __m256i, bytes);
 
@@ -91,7 +94,9 @@ pub unsafe fn decode(mut string: &[u8], mut dest: *mut u8) -> Result<*mut u8, cr
 
 	if string.len() >= 32 {
 		let nibbles = decode_hex(_mm256_loadu_si256(string.as_ptr() as *const __m256i));
-		validate_hex(nibbles)?;
+		if validate_hex(nibbles).is_err() {
+			return scalar::decode(string, dest).map_err(|error| error.shifted(input_len - string.len()));
+		}
 		let pairs = _mm256_maddubs_epi16(nibbles, _mm256_set1_epi16(0x0110));
 		let bytes = _mm256_shuffle_epi8(
 			pairs,
@@ -108,7 +113,10 @@ pub unsafe fn decode(mut string: &[u8], mut dest: *mut u8) -> Result<*mut u8, cr
 	}
 
 	if string.len() >= 16 {
-		let nibbles = decode_hex_16(_mm_loadu_si128(string.as_ptr() as *const __m128i))?;
+		let Ok(nibbles) = decode_hex_16(_mm_loadu_si128(string.as_ptr() as *const __m128i))
+		else {
+			return scalar::decode(string, dest).map_err(|error| error.shifted(input_len - string.len()));
+		};
 		let pairs = _mm_maddubs_epi16(nibbles, _mm_set1_epi16(0x0110));
 		let bytes = _mm_shuffle_epi8(
 			pairs,
@@ -120,7 +128,7 @@ pub unsafe fn decode(mut string: &[u8], mut dest: *mut u8) -> Result<*mut u8, cr
 		dest = dest.add(8);
 	}
 
-	scalar::decode(string, dest)
+	scalar::decode(string, dest).map_err(|error| error.shifted(input_len - string.len()))
 }
 
 #[test]

@@ -7,18 +7,20 @@ use super::*;
 
 #[target_feature(enable = "ssse3")]
 pub unsafe fn decode(mut string: &[u8], pad: Padding, mut dest: *mut u8) -> Result<*mut u8, crate::Error> {
+	let input_len = string.len();
 	while string.len() >= 16 {
 		let block = _mm_loadu_si128(string.as_ptr() as *const __m128i);
 		let Ok(values) = lookup(block)
 		else {
-			dest = scalar::decode_chunk(&mut string, pad, dest)?;
+			let offset = input_len - string.len();
+			dest = scalar::decode_chunk(&mut string, pad, dest).map_err(|error| error.shifted(offset))?;
 			continue;
 		};
 		store(compact(pack(values)), dest);
 		dest = dest.add(12);
 		string = string.get_unchecked(16..);
 	}
-	scalar::decode(string, pad, dest)
+	scalar::decode(string, pad, dest).map_err(|error| error.shifted(input_len - string.len()))
 }
 
 #[inline]
@@ -30,7 +32,7 @@ unsafe fn store(value: __m128i, dest: *mut u8) {
 
 #[inline]
 #[target_feature(enable = "ssse3")]
-unsafe fn lookup(input: __m128i) -> Result<__m128i, crate::Error> {
+unsafe fn lookup(input: __m128i) -> Result<__m128i, crate::ErrorKind> {
 	let higher_nibble = _mm_and_si128(_mm_srli_epi32(input, 4), _mm_set1_epi8(0x0f));
 	let lower_nibble = _mm_and_si128(input, _mm_set1_epi8(0x0f));
 	let lower_lut = _mm_setr_epi8(
@@ -46,7 +48,7 @@ unsafe fn lookup(input: __m128i) -> Result<__m128i, crate::Error> {
 		_mm_shuffle_epi8(higher_lut, higher_nibble),
 	);
 	if _mm_movemask_epi8(_mm_cmpeq_epi8(invalid, _mm_setzero_si128())) != 0xffff {
-		return Err(crate::Error::InvalidCharacter);
+		return Err(crate::ErrorKind::InvalidCharacter);
 	}
 
 	let slash = _mm_cmpeq_epi8(input, _mm_set1_epi8(b'/' as i8));

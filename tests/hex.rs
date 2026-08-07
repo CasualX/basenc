@@ -27,7 +27,11 @@ fn stuff() {
 	assert_eq!(UpperHex.decode_into("5acFfDA7Ca3E373d4A11", &mut [0u8; 16]), Ok(bytes));
 	assert_eq!(LowerHex.decode_bytes(b"5ACfFda7cA3e373D4a11").as_deref(), Ok(bytes));
 	assert_eq!(UpperHex.decode_bytes_into(b"5acFfDA7Ca3E373d4A11", &mut [0u8; 16]), Ok(bytes));
-	assert_eq!(LowerHex.decode_bytes(b"00\xff0"), Err(Error::InvalidCharacter));
+	assert_eq!(LowerHex.decode_bytes(b"00\xff0"), Err(Error::new(ErrorKind::InvalidCharacter, 2)));
+	let error = LowerHex.decode("0").unwrap_err();
+	assert_eq!(error.kind, ErrorKind::IncorrectLength);
+	assert_eq!(error.offset, 1);
+	assert_eq!(error.to_string(), "incorrect length at offset 1");
 }
 
 fn smash(encoding: &impl Encoding, input_buf: &mut [u8]) {
@@ -61,15 +65,23 @@ fn simd_character_validation() {
 			for byte in 0..=u8::MAX {
 				let valid = byte.is_ascii_hexdigit();
 				string[index] = byte;
-				assert_eq!(
-					LowerHex.decode_bytes_into(&string, &mut output).is_ok(),
-					valid,
-					"length {len}, index {index}, byte {byte:#04x}",
-				);
+				let result = LowerHex.decode_bytes_into(&string, &mut output).map(|_| ());
+				let expected = if valid {
+					Ok(())
+				}
+				else {
+					Err(Error::new(ErrorKind::InvalidCharacter, index))
+				};
+				assert_eq!(result, expected, "length {len}, index {index}, byte {byte:#04x}");
 			}
 			string[index] = b'0';
 		}
 	}
+
+	assert_eq!(
+		LowerHex.decode_bytes(&[b'0'; 33]),
+		Err(Error::new(ErrorKind::IncorrectLength, 33)),
+	);
 }
 
 #[test]

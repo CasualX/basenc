@@ -77,12 +77,10 @@ pub mod incremental;
 
 //----------------------------------------------------------------
 
-/// Decoding error.
-///
-/// Note that encoding can never fail.
+/// The kind of decoding error.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 #[non_exhaustive]
-pub enum Error {
+pub enum ErrorKind {
 	/// Not a valid character in the alphabet.
 	InvalidCharacter,
 	/// Input has incorrect length or is not padded to the required length.
@@ -93,13 +91,45 @@ pub enum Error {
 	NonCanonical,
 }
 
-impl fmt::Display for Error {
+impl fmt::Display for ErrorKind {
 	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
 		f.write_str(match self {
-			Error::InvalidCharacter => "invalid character",
-			Error::IncorrectLength => "incorrect length",
-			Error::NonCanonical => "non-canonical input",
+			ErrorKind::InvalidCharacter => "invalid character",
+			ErrorKind::IncorrectLength => "incorrect length",
+			ErrorKind::NonCanonical => "non-canonical input",
 		})
+	}
+}
+
+/// Decoding error.
+///
+/// Note that encoding can never fail.
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+pub struct Error {
+	/// The kind of error that occurred.
+	pub kind: ErrorKind,
+	/// Zero-based byte offset where the error was encountered.
+	///
+	/// An offset equal to the input length indicates an unexpected end of input.
+	pub offset: usize,
+}
+
+impl Error {
+	/// Creates a decoding error.
+	#[inline]
+	pub const fn new(kind: ErrorKind, offset: usize) -> Self {
+		Self { kind, offset }
+	}
+
+	#[inline]
+	pub(crate) const fn shifted(self, offset: usize) -> Self {
+		Self { offset: self.offset + offset, ..self }
+	}
+}
+
+impl fmt::Display for Error {
+	fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+		write!(f, "{} at offset {}", self.kind, self.offset)
 	}
 }
 

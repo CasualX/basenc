@@ -9,6 +9,7 @@ use super::*;
 
 #[target_feature(enable = "sse2")]
 pub unsafe fn decode(mut string: &[u8], base: &Base64, pad: Padding, mut dest: *mut u8) -> Result<*mut u8, crate::Error> {
+	let input_len = string.len();
 	if string.is_empty() {
 		return Ok(dest);
 	}
@@ -18,7 +19,8 @@ pub unsafe fn decode(mut string: &[u8], base: &Base64, pad: Padding, mut dest: *
 
 		let Ok(values) = lookup(block, base)
 		else {
-			dest = scalar::decode_chunk(&mut string, base, pad, dest)?;
+			let offset = input_len - string.len();
+			dest = scalar::decode_chunk(&mut string, base, pad, dest).map_err(|error| error.shifted(offset))?;
 			continue;
 		};
 
@@ -30,7 +32,7 @@ pub unsafe fn decode(mut string: &[u8], base: &Base64, pad: Padding, mut dest: *
 		string = string.get_unchecked(16..);
 	}
 
-	scalar::decode(string, base, pad, dest)
+	scalar::decode(string, base, pad, dest).map_err(|error| error.shifted(input_len - string.len()))
 }
 
 //----------------------------------------------------------------
@@ -48,7 +50,7 @@ unsafe fn store(value: __m128i, dest: *mut u8) {
 
 #[inline]
 #[target_feature(enable = "sse2")]
-unsafe fn lookup(input: __m128i, base: &Base64) -> Result<__m128i, crate::Error> {
+unsafe fn lookup(input: __m128i, base: &Base64) -> Result<__m128i, crate::ErrorKind> {
 	#![allow(non_snake_case)]
 
 	// shift for range 'A' - 'Z'
@@ -94,7 +96,7 @@ unsafe fn lookup(input: __m128i, base: &Base64) -> Result<__m128i, crate::Error>
 		_mm_or_si128(mask_09,
 		_mm_or_si128(eq_char62, eq_char63))));
 	if _mm_movemask_epi8(valid) != 0xffff {
-		return Err(crate::Error::InvalidCharacter);
+		return Err(crate::ErrorKind::InvalidCharacter);
 	}
 
 	Ok(_mm_add_epi8(input, shift))

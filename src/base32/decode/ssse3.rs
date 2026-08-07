@@ -16,7 +16,7 @@ unsafe fn select_row(values: __m128i, lower: __m128i, higher: __m128i, row: usiz
 
 #[inline]
 #[target_feature(enable = "ssse3")]
-unsafe fn lookup(input: __m128i, base: &Base32) -> Result<__m128i, crate::Error> {
+unsafe fn lookup(input: __m128i, base: &Base32) -> Result<__m128i, crate::ErrorKind> {
 	let lower = _mm_and_si128(input, _mm_set1_epi8(0x0f));
 	let higher = _mm_and_si128(_mm_srli_epi16::<4>(input), _mm_set1_epi8(0x0f));
 	let mut values = _mm_set1_epi8(-1);
@@ -40,7 +40,7 @@ unsafe fn lookup(input: __m128i, base: &Base32) -> Result<__m128i, crate::Error>
 	// Valid values are 0..31. Invalid table entries and absent/non-ASCII
 	// rows retain their high bit.
 	if _mm_movemask_epi8(values) != 0 {
-		return Err(crate::Error::InvalidCharacter);
+		return Err(crate::ErrorKind::InvalidCharacter);
 	}
 	Ok(values)
 }
@@ -75,6 +75,7 @@ unsafe fn store(value: __m128i, dest: *mut u8) {
 
 #[target_feature(enable = "ssse3")]
 pub unsafe fn decode(mut string: &[u8], base: &Base32, pad: Padding, mut dest: *mut u8) -> Result<*mut u8, crate::Error> {
+	let input_len = string.len();
 	// One vector alone does not amortize the dynamic row lookup on this ISA.
 	if string.len() < 32 {
 		return scalar::decode(string, base, pad, dest);
@@ -84,7 +85,8 @@ pub unsafe fn decode(mut string: &[u8], base: &Base32, pad: Padding, mut dest: *
 		let input = _mm_loadu_si128(string.as_ptr() as *const __m128i);
 		let Ok(values) = lookup(input, base)
 		else {
-			dest = scalar::decode_chunk(&mut string, base, pad, dest)?;
+			let offset = input_len - string.len();
+			dest = scalar::decode_chunk(&mut string, base, pad, dest).map_err(|error| error.shifted(offset))?;
 			continue;
 		};
 		store(pack(values), dest);
@@ -92,5 +94,5 @@ pub unsafe fn decode(mut string: &[u8], base: &Base32, pad: Padding, mut dest: *
 		dest = dest.add(10);
 	}
 
-	scalar::decode(string, base, pad, dest)
+	scalar::decode(string, base, pad, dest).map_err(|error| error.shifted(input_len - string.len()))
 }

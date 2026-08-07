@@ -17,7 +17,7 @@ unsafe fn select_row(values: __m256i, lower: __m256i, higher: __m256i, row: usiz
 
 #[inline]
 #[target_feature(enable = "avx2")]
-unsafe fn lookup(input: __m256i, base: &Base32) -> Result<__m256i, crate::Error> {
+unsafe fn lookup(input: __m256i, base: &Base32) -> Result<__m256i, crate::ErrorKind> {
 	let lower = _mm256_and_si256(input, _mm256_set1_epi8(0x0f));
 	let higher = _mm256_and_si256(_mm256_srli_epi16::<4>(input), _mm256_set1_epi8(0x0f));
 	let mut values = _mm256_set1_epi8(-1);
@@ -39,7 +39,7 @@ unsafe fn lookup(input: __m256i, base: &Base32) -> Result<__m256i, crate::Error>
 	row!(7);
 
 	if _mm256_movemask_epi8(values) != 0 {
-		return Err(crate::Error::InvalidCharacter);
+		return Err(crate::ErrorKind::InvalidCharacter);
 	}
 	Ok(values)
 }
@@ -83,11 +83,13 @@ unsafe fn store(value: __m256i, dest: *mut u8) {
 
 #[target_feature(enable = "avx2")]
 pub unsafe fn decode(mut string: &[u8], base: &Base32, pad: Padding, mut dest: *mut u8) -> Result<*mut u8, crate::Error> {
+	let input_len = string.len();
 	while string.len() >= 32 {
 		let input = _mm256_loadu_si256(string.as_ptr() as *const __m256i);
 		let Ok(values) = lookup(input, base)
 		else {
-			dest = scalar::decode_chunk(&mut string, base, pad, dest)?;
+			let offset = input_len - string.len();
+			dest = scalar::decode_chunk(&mut string, base, pad, dest).map_err(|error| error.shifted(offset))?;
 			continue;
 		};
 		store(pack(values), dest);
@@ -100,13 +102,12 @@ pub unsafe fn decode(mut string: &[u8], base: &Base32, pad: Padding, mut dest: *
 		let input = _mm256_inserti128_si256::<1>(_mm256_castsi128_si256(input), input);
 		let Ok(values) = lookup(input, base)
 		else {
-			return scalar::decode(string, base, pad, dest);
+			return scalar::decode(string, base, pad, dest).map_err(|error| error.shifted(input_len - string.len()));
 		};
 		store_lane(_mm256_castsi256_si128(pack(values)), dest);
 		string = string.get_unchecked(16..);
 		dest = dest.add(10);
 	}
 
-	scalar::decode(string, base, pad, dest)
+	scalar::decode(string, base, pad, dest).map_err(|error| error.shifted(input_len - string.len()))
 }
-

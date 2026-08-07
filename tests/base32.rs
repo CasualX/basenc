@@ -31,19 +31,19 @@ fn padding_policies() {
 	let forbidden = Base32Std.pad(Padding::Forbidden);
 	assert_eq!(forbidden.encode(b"f"), "MY");
 	assert_eq!(forbidden.decode("MY"), Ok(b"f".to_vec()));
-	assert_eq!(forbidden.decode("MY======"), Err(Error::InvalidCharacter));
+	assert_eq!(forbidden.decode("MY======"), Err(Error::new(ErrorKind::InvalidCharacter, 2)));
 
 	let optional = Base32Std.pad(Padding::Optional);
 	assert_eq!(optional.encode(b"f"), "MY");
 	assert_eq!(optional.decode("MY"), Ok(b"f".to_vec()));
 	assert_eq!(optional.decode("MY======"), Ok(b"f".to_vec()));
-	assert_eq!(optional.decode("MY======MZXQ===="), Err(Error::InvalidCharacter));
+	assert_eq!(optional.decode("MY======MZXQ===="), Err(Error::new(ErrorKind::InvalidCharacter, 8)));
 
 	let required = Base32Std.pad(Padding::Required);
 	assert_eq!(required.encode(b"f"), "MY======");
-	assert_eq!(required.decode("MY"), Err(Error::IncorrectLength));
+	assert_eq!(required.decode("MY"), Err(Error::new(ErrorKind::IncorrectLength, 2)));
 	assert_eq!(required.decode("MY======"), Ok(b"f".to_vec()));
-	assert_eq!(required.decode("MY======MZXQ===="), Err(Error::InvalidCharacter));
+	assert_eq!(required.decode("MY======MZXQ===="), Err(Error::new(ErrorKind::InvalidCharacter, 8)));
 
 	let internal = Base32Std.pad(Padding::Internal);
 	assert_eq!(internal.encode(b"f"), "MY");
@@ -133,14 +133,21 @@ fn simd_character_validation() {
 		invalid[index] = b'=';
 		assert_eq!(
 			Encoding::decode_into(&Base32Z.pad(NoPad), &invalid, Vec::new()),
-			Err(Error::InvalidCharacter),
+			Err(Error::new(ErrorKind::InvalidCharacter, index)),
 			"index {index}"
 		);
 	}
 
 	let mut non_ascii = encoded;
 	non_ascii[31] = 0x80;
-	assert_eq!(Encoding::decode_into(&Base32Z, &non_ascii, Vec::new()), Err(Error::InvalidCharacter));
+	assert_eq!(Encoding::decode_into(&Base32Z, &non_ascii, Vec::new()), Err(Error::new(ErrorKind::InvalidCharacter, 31)));
+
+	let mut noncanonical = [b'A'; 34];
+	noncanonical[33] = b'B';
+	assert_eq!(
+		Encoding::decode_into(&Base32Std, &noncanonical, Vec::new()),
+		Err(Error::new(ErrorKind::NonCanonical, 33)),
+	);
 }
 
 #[test]

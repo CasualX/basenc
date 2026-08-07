@@ -7,12 +7,14 @@ use super::*;
 
 #[target_feature(enable = "avx2")]
 pub unsafe fn decode(mut string: &[u8], pad: Padding, mut dest: *mut u8) -> Result<*mut u8, crate::Error> {
+	let input_len = string.len();
 	while string.len() >= 32 {
 		let consumed = decode_blocks(string, dest);
 		string = string.get_unchecked(consumed..);
 		dest = dest.add(consumed / 4 * 3);
 		if string.len() >= 32 {
-			dest = scalar::decode_chunk(&mut string, pad, dest)?;
+			let offset = input_len - string.len();
+			dest = scalar::decode_chunk(&mut string, pad, dest).map_err(|error| error.shifted(offset))?;
 		}
 	}
 
@@ -21,7 +23,8 @@ pub unsafe fn decode(mut string: &[u8], pad: Padding, mut dest: *mut u8) -> Resu
 		let lanes = _mm256_inserti128_si256::<1>(_mm256_castsi128_si256(block), block);
 		let Ok(values) = lookup(lanes)
 		else {
-			dest = scalar::decode_chunk(&mut string, pad, dest)?;
+			let offset = input_len - string.len();
+			dest = scalar::decode_chunk(&mut string, pad, dest).map_err(|error| error.shifted(offset))?;
 			continue;
 		};
 		store_lane(_mm256_castsi256_si128(compact(pack(values))), dest);
@@ -29,7 +32,7 @@ pub unsafe fn decode(mut string: &[u8], pad: Padding, mut dest: *mut u8) -> Resu
 		string = string.get_unchecked(16..);
 	}
 
-	scalar::decode(string, pad, dest)
+	scalar::decode(string, pad, dest).map_err(|error| error.shifted(input_len - string.len()))
 }
 
 #[inline(never)]
@@ -66,7 +69,7 @@ unsafe fn store_lane(value: __m128i, dest: *mut u8) {
 
 #[inline]
 #[target_feature(enable = "avx2")]
-unsafe fn lookup(input: __m256i) -> Result<__m256i, crate::Error> {
+unsafe fn lookup(input: __m256i) -> Result<__m256i, crate::ErrorKind> {
 	let higher_nibble = _mm256_and_si256(_mm256_srli_epi32(input, 4), _mm256_set1_epi8(0x0f));
 	let lower_nibble = _mm256_and_si256(input, _mm256_set1_epi8(0x0f));
 	let lower_lut = _mm256_setr_epi8(
@@ -86,7 +89,7 @@ unsafe fn lookup(input: __m256i) -> Result<__m256i, crate::Error> {
 		_mm256_shuffle_epi8(higher_lut, higher_nibble),
 	);
 	if _mm256_testz_si256(invalid, invalid) == 0 {
-		return Err(crate::Error::InvalidCharacter);
+		return Err(crate::ErrorKind::InvalidCharacter);
 	}
 
 	let slash = _mm256_cmpeq_epi8(input, _mm256_set1_epi8(b'/' as i8));

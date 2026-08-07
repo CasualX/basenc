@@ -33,12 +33,12 @@ unsafe fn decode_hex(v: __m128i) -> __m128i {
 
 #[inline]
 #[target_feature(enable = "sse2")]
-unsafe fn validate_hex(result: __m128i) -> Result<(), crate::Error> {
+unsafe fn validate_hex(result: __m128i) -> Result<(), crate::ErrorKind> {
 	// Detect errors, i.e. bytes greater than 15. As SSE does not provide an unsigned compare, we have to use a trick with the saturated add.
 	let checked = _mm_adds_epu8(result, _mm_set1_epi8(127 - 15));
 
 	if _mm_movemask_epi8(checked) != 0 {
-		return Err(crate::Error::InvalidCharacter);
+		return Err(crate::ErrorKind::InvalidCharacter);
 	}
 
 	Ok(())
@@ -55,11 +55,14 @@ unsafe fn nibbles2bytes(result: __m128i) -> __m128i {
 
 #[target_feature(enable = "sse2")]
 pub unsafe fn decode(mut string: &[u8], mut dest: *mut u8) -> Result<*mut u8, crate::Error> {
+	let input_len = string.len();
 	while string.len() >= 32 {
 		let src = string.as_ptr() as *const __m128i;
 		let a = decode_hex(_mm_loadu_si128(src));
 		let b = decode_hex(_mm_loadu_si128(src.add(1)));
-		validate_hex(_mm_max_epu8(a, b))?;
+		if validate_hex(_mm_max_epu8(a, b)).is_err() {
+			return scalar::decode(string, dest).map_err(|error| error.shifted(input_len - string.len()));
+		}
 		let bytes = _mm_unpacklo_epi64(nibbles2bytes(a), nibbles2bytes(b));
 		_mm_storeu_si128(dest as *mut __m128i, bytes);
 
@@ -69,12 +72,14 @@ pub unsafe fn decode(mut string: &[u8], mut dest: *mut u8) -> Result<*mut u8, cr
 
 	if string.len() >= 16 {
 		let nibbles = decode_hex(_mm_loadu_si128(string.as_ptr() as *const __m128i));
-		validate_hex(nibbles)?;
+		if validate_hex(nibbles).is_err() {
+			return scalar::decode(string, dest).map_err(|error| error.shifted(input_len - string.len()));
+		}
 		_mm_storeu_si64(dest, nibbles2bytes(nibbles));
 
 		dest = dest.add(8);
 		string = &string[16..];
 	}
 
-	scalar::decode(string, dest)
+	scalar::decode(string, dest).map_err(|error| error.shifted(input_len - string.len()))
 }

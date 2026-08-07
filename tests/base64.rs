@@ -7,9 +7,9 @@ fn roundtrip(input: &[u8], encoding: &impl Encoding, expected: &str) {
 }
 
 #[track_caller]
-fn error(string: &str, enc: &impl crate::Encoding, err: Error) {
+fn error(string: &str, enc: &impl crate::Encoding, kind: ErrorKind, offset: usize) {
 	let mut buf = [0u8; 64];
-	assert_eq!(enc.decode_into(string.as_bytes(), &mut buf), Err(err));
+	assert_eq!(enc.decode_into(string.as_bytes(), &mut buf), Err(Error::new(kind, offset)));
 }
 
 #[test]
@@ -60,17 +60,17 @@ fn cwgem_test_base64_rb() {
 	roundtrip(b"\xff\xef", &Base64Std, "/+8=");
 
 	let base64std_strict = Base64Std.pad(Padding::Required);
-	error("^", &base64std_strict, Error::IncorrectLength);
-	error("A", &base64std_strict, Error::IncorrectLength);
-	error("A^", &base64std_strict, Error::IncorrectLength);
-	error("AA", &base64std_strict, Error::IncorrectLength);
-	error("AA=", &base64std_strict, Error::IncorrectLength);
-	error("AA===", &base64std_strict, Error::IncorrectLength);
-	error("AA=x", &base64std_strict, Error::InvalidCharacter);
-	error("AAA", &base64std_strict, Error::IncorrectLength);
-	error("AAA^", &base64std_strict, Error::InvalidCharacter);
-	error("AB==", &base64std_strict, Error::NonCanonical);
-	error("AAB=", &base64std_strict, Error::NonCanonical);
+	error("^", &base64std_strict, ErrorKind::IncorrectLength, 1);
+	error("A", &base64std_strict, ErrorKind::IncorrectLength, 1);
+	error("A^", &base64std_strict, ErrorKind::IncorrectLength, 2);
+	error("AA", &base64std_strict, ErrorKind::IncorrectLength, 2);
+	error("AA=", &base64std_strict, ErrorKind::IncorrectLength, 3);
+	error("AA===", &base64std_strict, ErrorKind::IncorrectLength, 5);
+	error("AA=x", &base64std_strict, ErrorKind::InvalidCharacter, 2);
+	error("AAA", &base64std_strict, ErrorKind::IncorrectLength, 3);
+	error("AAA^", &base64std_strict, ErrorKind::InvalidCharacter, 3);
+	error("AB==", &base64std_strict, ErrorKind::NonCanonical, 1);
+	error("AAB=", &base64std_strict, ErrorKind::NonCanonical, 2);
 
 	roundtrip(b"", &Base64Url, "");
 	roundtrip(b"\0", &Base64Url, "AA");
@@ -87,7 +87,7 @@ fn padding_policies() {
 	let forbidden = Base64Std.pad(Padding::Forbidden);
 	assert_eq!(forbidden.encode(b"f"), "Zg");
 	assert_eq!(forbidden.decode("Zg"), Ok(b"f".to_vec()));
-	assert_eq!(forbidden.decode("Zg=="), Err(Error::InvalidCharacter));
+	assert_eq!(forbidden.decode("Zg=="), Err(Error::new(ErrorKind::InvalidCharacter, 2)));
 
 	let optional = Base64Std.pad(Padding::Optional);
 	assert_eq!(optional.encode(b"f"), "Zg");
@@ -95,13 +95,13 @@ fn padding_policies() {
 	assert_eq!(optional.decode_bytes(b"Zg"), Ok(b"f".to_vec()));
 	assert_eq!(optional.decode_bytes_into(b"Zg", Vec::new()), Ok(b"f".to_vec()));
 	assert_eq!(optional.decode("Zg=="), Ok(b"f".to_vec()));
-	assert_eq!(optional.decode("Zg==Zm8="), Err(Error::InvalidCharacter));
+	assert_eq!(optional.decode("Zg==Zm8="), Err(Error::new(ErrorKind::InvalidCharacter, 4)));
 
 	let required = Base64Std.pad(Padding::Required);
 	assert_eq!(required.encode(b"f"), "Zg==");
-	assert_eq!(required.decode("Zg"), Err(Error::IncorrectLength));
+	assert_eq!(required.decode("Zg"), Err(Error::new(ErrorKind::IncorrectLength, 2)));
 	assert_eq!(required.decode("Zg=="), Ok(b"f".to_vec()));
-	assert_eq!(required.decode("Zg==Zm8="), Err(Error::InvalidCharacter));
+	assert_eq!(required.decode("Zg==Zm8="), Err(Error::new(ErrorKind::InvalidCharacter, 4)));
 
 	let internal = Base64Std.pad(Padding::Internal);
 	assert_eq!(internal.encode(b"f"), "Zg");
@@ -111,7 +111,7 @@ fn padding_policies() {
 
 	// The first padded segment ends exactly at a SIMD block boundary.
 	let segmented = "Zm9vYmFyYmF6Zg==Zm8=";
-	assert_eq!(optional.decode(segmented), Err(Error::InvalidCharacter));
+	assert_eq!(optional.decode(segmented), Err(Error::new(ErrorKind::InvalidCharacter, 16)));
 	assert_eq!(internal.decode(segmented), Ok(b"foobarbazffo".to_vec()));
 
 	// SIMD decoding can resume immediately after an internally padded segment.
@@ -162,16 +162,30 @@ fn simd_character_validation() {
 				|| byte.is_ascii_digit()
 				|| byte == char62
 				|| byte == char63;
-			assert_eq!(
-				encoding.decode_into(&string, Vec::new()).is_ok(),
-				valid,
-				"byte {byte:#04x}",
-			);
+			let result = encoding.decode_into(&string, Vec::new()).map(|_| ());
+			let expected = if valid {
+				Ok(())
+			}
+			else {
+				Err(Error::new(ErrorKind::InvalidCharacter, 8))
+			};
+			assert_eq!(result, expected, "byte {byte:#04x}");
 		}
 	}
 
 	check(&Base64Std.pad(NoPad), b'+', b'/');
 	check(&Base64Url.pad(NoPad), b'-', b'_');
+
+	let mut noncanonical = [b'A'; 34];
+	noncanonical[33] = b'B';
+	assert_eq!(
+		Encoding::decode_into(&Base64Std, &noncanonical, Vec::new()),
+		Err(Error::new(ErrorKind::NonCanonical, 33)),
+	);
+	assert_eq!(
+		Encoding::decode_into(&Base64Url, &noncanonical, Vec::new()),
+		Err(Error::new(ErrorKind::NonCanonical, 33)),
+	);
 }
 
 #[test]
