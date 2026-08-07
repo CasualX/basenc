@@ -83,8 +83,8 @@ jobs:
             features: std
           - name: x86 scalar
             target: i686-pc-windows-msvc
-            rustflags: -C target-feature=-sse2,-ssse3
-            features: std
+            rustflags: -C target-feature=+sse2,-ssse3
+            features: std,simd-off
           - name: x86 SSE2
             target: i686-pc-windows-msvc
             rustflags: -C target-feature=+sse2,-ssse3
