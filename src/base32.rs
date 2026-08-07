@@ -107,7 +107,7 @@ pub static Base32Hex: Base32 = Base32::new(b"0123456789ABCDEFGHIJKLMNOPQRSTUV");
 /// The alphabet is `ybndrfg8ejkmcpqxot1uwisza345h769`.
 /// Padding is omitted while encoding and rejected while decoding by default.
 #[allow(non_upper_case_globals)]
-pub static Base32Z: WithPad<'static, Base32> = WithPad::new(&Base32::new(b"ybndrfg8ejkmcpqxot1uwisza345h769"), Padding::Forbidden);
+pub static Base32Z: WithPad<'static, Base32> = Base32::new(b"ybndrfg8ejkmcpqxot1uwisza345h769").pad(Padding::Forbidden);
 
 //----------------------------------------------------------------
 // Encoding

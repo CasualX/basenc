@@ -23,6 +23,19 @@ let decoded = basenc::Base64Std.decode("aGVsbG8gd29ybGQ=").unwrap();
 assert_eq!(decoded, b"hello world");
 ```
 
+Padding
+-------
+
+The standard Base64 and Base32 encodings emit padding by default. Use [`Padding`]
+with an encoding's `pad` method to select a different policy.
+
+```
+use basenc::{Base64Std, Padding};
+
+let encoded = Base64Std.pad(Padding::Forbidden).encode(b"hello world");
+assert_eq!(encoded, "aGVsbG8gd29ybGQ");
+```
+
 Encoding
 --------
 
@@ -105,6 +118,7 @@ impl fmt::Display for ErrorKind {
 ///
 /// Note that encoding can never fail.
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[non_exhaustive]
 pub struct Error {
 	/// The kind of error that occurred.
 	pub kind: ErrorKind,

@@ -54,10 +54,7 @@ impl Base64 {
 	/// # Panics
 	///
 	/// Panics if the alphabet contains `=`, duplicate or non-ASCII characters.
-	pub const fn new(
-		char62: u8,
-		char63: u8,
-	) -> Base64 {
+	pub const fn new(char62: u8, char63: u8) -> Base64 {
 		let charset_upper_index = 0;
 		let charset_lower_index = 26;
 		let charset_digits_index = 52;
