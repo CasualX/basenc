@@ -9,4 +9,7 @@ impl_arch_encode! {
 		avx2: "avx2" is_x86_feature_detected!("avx2");
 		ssse3: "ssse3" is_x86_feature_detected!("ssse3");
 	},
+	(all(target_arch = "wasm32", target_feature = "simd128")) => {
+		simd128: "simd128" cfg!(target_feature = "simd128");
+	},
 }

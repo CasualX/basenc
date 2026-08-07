@@ -1,0 +1,19 @@
+[package]
+name = "basenc-wasm-tests"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[features]
+scalar = ["basenc/simd-off"]
+
+[dependencies]
+basenc = { path = "..", default-features = false }
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"

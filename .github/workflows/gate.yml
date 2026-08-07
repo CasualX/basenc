@@ -28,6 +28,7 @@ jobs:
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: ${{ matrix.rust }}
+          targets: wasm32-unknown-unknown
 
       - name: Run tests
         run: cargo test
@@ -45,6 +46,23 @@ jobs:
       - name: Run proptest tests (Release)
         working-directory: proptest
         run: cargo test --release
+
+      - name: Build wasm32 scalar tests
+        working-directory: wasm-tests
+        env:
+          CARGO_TARGET_DIR: target/scalar
+        run: cargo build --release --target wasm32-unknown-unknown --features scalar
+
+      - name: Build wasm32 SIMD128 tests
+        working-directory: wasm-tests
+        env:
+          CARGO_TARGET_DIR: target/simd
+          RUSTFLAGS: -C target-feature=+simd128
+        run: cargo build --release --target wasm32-unknown-unknown
+
+      - name: Run wasm32 tests
+        working-directory: wasm-tests
+        run: node run.mjs
 
   windows:
     runs-on: windows-latest

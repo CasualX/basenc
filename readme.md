@@ -45,6 +45,12 @@ assert_eq!(decoded, b"hello world");
 
 Tip: Build with `RUSTFLAGS="-C target-cpu=native"` (bash) or `set RUSTFLAGS=-C target-cpu=native` (cmd) to **enable compiletime detection**.
 
+For WebAssembly SIMD, build with `RUSTFLAGS="-C target-feature=+simd128" cargo build --target wasm32-unknown-unknown`.
+Wasm SIMD is selected at compile time; engines which do not support SIMD128 reject the module during validation,
+so applications that need a scalar fallback should ship a second build and select between them with `WebAssembly.validate` or feature detection in their loader.
+
+The [`wasm-tests`](wasm-tests/) standalone crate builds scalar and SIMD128 modules for correctness comparison and optional Node benchmarks.
+
 📜 License
 ----------
 
