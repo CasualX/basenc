@@ -2,8 +2,8 @@ use basenc::*;
 
 #[track_caller]
 fn roundtrip(input: &[u8], encoding: &impl Encoding, expected: &str) {
-	assert_eq!(expected, encoding.encode_into(input, String::new()));
-	assert_eq!(Ok(input), encoding.decode_into(expected.as_bytes(), Vec::new()).as_deref());
+	assert_eq!(expected, encoding.encode_bytes_into(input, String::new()));
+	assert_eq!(Ok(input), encoding.decode_bytes_into(expected.as_bytes(), Vec::new()).as_deref());
 }
 
 #[test]
@@ -60,8 +60,8 @@ fn smash(encoding: &impl Encoding, input_buf: &mut [u8]) {
 		rng.fill_bytes(&mut input_buf[..len]);
 
 		let input = &input_buf[..len];
-		let encoded = encoding.encode_into(input, String::new());
-		let decoded = encoding.decode_into(encoded.as_bytes(), Vec::new()).unwrap();
+		let encoded = encoding.encode_bytes_into(input, String::new());
+		let decoded = encoding.decode_bytes_into(encoded.as_bytes(), Vec::new()).unwrap();
 		assert_eq!(input, decoded);
 	}
 }
@@ -94,7 +94,7 @@ fn fully_dynamic_alphabet() {
 		let encoded = dynamic.encode_into(&input, String::new());
 		assert_eq!(encoded.as_bytes(), expected, "encoded length {len}");
 		assert_eq!(
-			Encoding::decode_into(&dynamic, encoded.as_bytes(), Vec::new()).as_deref(),
+			Encoding::decode_bytes_into(&dynamic, encoded.as_bytes(), Vec::new()).as_deref(),
 			Ok(input.as_slice()),
 			"decoded length {len}"
 		);
@@ -116,7 +116,7 @@ fn fully_dynamic_alphabet() {
 		let encoded_padded = dynamic_padded.encode_into(&input, String::new());
 		assert_eq!(encoded_padded.as_bytes(), expected_padded, "padded encoded length {len}");
 		assert_eq!(
-			Encoding::decode_into(&dynamic_padded, encoded_padded.as_bytes(), Vec::new()).as_deref(),
+			Encoding::decode_bytes_into(&dynamic_padded, encoded_padded.as_bytes(), Vec::new()).as_deref(),
 			Ok(input.as_slice()),
 			"padded decoded length {len}"
 		);
@@ -132,7 +132,7 @@ fn simd_character_validation() {
 		let mut invalid = encoded.clone();
 		invalid[index] = b'=';
 		assert_eq!(
-			Encoding::decode_into(&Base32Z.pad(NoPad), &invalid, Vec::new()),
+			Encoding::decode_bytes_into(&Base32Z.pad(NoPad), &invalid, Vec::new()),
 			Err(Error::new(ErrorKind::InvalidCharacter, index)),
 			"index {index}"
 		);
@@ -140,12 +140,12 @@ fn simd_character_validation() {
 
 	let mut non_ascii = encoded;
 	non_ascii[31] = 0x80;
-	assert_eq!(Encoding::decode_into(&Base32Z, &non_ascii, Vec::new()), Err(Error::new(ErrorKind::InvalidCharacter, 31)));
+	assert_eq!(Encoding::decode_bytes_into(&Base32Z, &non_ascii, Vec::new()), Err(Error::new(ErrorKind::InvalidCharacter, 31)));
 
 	let mut noncanonical = [b'A'; 34];
 	noncanonical[33] = b'B';
 	assert_eq!(
-		Encoding::decode_into(&Base32Std, &noncanonical, Vec::new()),
+		Encoding::decode_bytes_into(&Base32Std, &noncanonical, Vec::new()),
 		Err(Error::new(ErrorKind::NonCanonical, 33)),
 	);
 }
@@ -162,7 +162,7 @@ fn simd_stores_stay_within_estimated_output() {
 
 		let decoded_len = Base32::RATIO.estimate_decoded_len(encoded_output.len());
 		let mut decoded = vec![0xa5; decoded_len + 1];
-		let decoded_output = Encoding::decode_into(&Base32Z, &encoded_output, &mut decoded[..decoded_len]).unwrap();
+		let decoded_output = Encoding::decode_bytes_into(&Base32Z, &encoded_output, &mut decoded[..decoded_len]).unwrap();
 		assert_eq!(decoded_output, input, "decode length {len}");
 		assert_eq!(decoded[decoded_len], 0xa5, "decode canary length {len}");
 	}

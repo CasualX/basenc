@@ -2,14 +2,14 @@ use basenc::*;
 
 #[track_caller]
 fn roundtrip(input: &[u8], encoding: &impl Encoding, expected: &str) {
-	assert_eq!(expected.trim_end_matches("="), encoding.encode_into(input, String::new()));
-	assert_eq!(Ok(input), encoding.decode_into(expected.as_bytes(), Vec::new()).as_deref());
+	assert_eq!(expected.trim_end_matches("="), encoding.encode_bytes_into(input, String::new()));
+	assert_eq!(Ok(input), encoding.decode_bytes_into(expected.as_bytes(), Vec::new()).as_deref());
 }
 
 #[track_caller]
 fn error(string: &str, enc: &impl crate::Encoding, kind: ErrorKind, offset: usize) {
 	let mut buf = [0u8; 64];
-	assert_eq!(enc.decode_into(string.as_bytes(), &mut buf), Err(Error::new(kind, offset)));
+	assert_eq!(enc.decode_bytes_into(string.as_bytes(), &mut buf), Err(Error::new(kind, offset)));
 }
 
 #[test]
@@ -138,8 +138,8 @@ fn smash(encoding: &impl Encoding, input_buf: &mut [u8]) {
 		rng.fill_bytes(&mut input_buf[..len]);
 
 		let input = &input_buf[..len];
-		let encoded = encoding.encode_into(input, String::new());
-		let decoded = encoding.decode_into(encoded.as_bytes(), Vec::new()).unwrap();
+		let encoded = encoding.encode_bytes_into(input, String::new());
+		let decoded = encoding.decode_bytes_into(encoded.as_bytes(), Vec::new()).unwrap();
 		assert_eq!(input, decoded);
 	}
 }
@@ -162,7 +162,7 @@ fn simd_character_validation() {
 				|| byte.is_ascii_digit()
 				|| byte == char62
 				|| byte == char63;
-			let result = encoding.decode_into(&string, Vec::new()).map(|_| ());
+			let result = encoding.decode_bytes_into(&string, Vec::new()).map(|_| ());
 			let expected = if valid {
 				Ok(())
 			}
@@ -179,11 +179,11 @@ fn simd_character_validation() {
 	let mut noncanonical = [b'A'; 34];
 	noncanonical[33] = b'B';
 	assert_eq!(
-		Encoding::decode_into(&Base64Std, &noncanonical, Vec::new()),
+		Encoding::decode_bytes_into(&Base64Std, &noncanonical, Vec::new()),
 		Err(Error::new(ErrorKind::NonCanonical, 33)),
 	);
 	assert_eq!(
-		Encoding::decode_into(&Base64Url, &noncanonical, Vec::new()),
+		Encoding::decode_bytes_into(&Base64Url, &noncanonical, Vec::new()),
 		Err(Error::new(ErrorKind::NonCanonical, 33)),
 	);
 }

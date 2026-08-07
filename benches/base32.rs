@@ -73,6 +73,6 @@ fn decode_scattered_4k(b: &mut test::Bencher) {
 	b.bytes = input.len() as u64;
 	b.iter(|| {
 		output.clear();
-		test::black_box(basenc::Encoding::decode_into(&SCATTERED, encoded.as_bytes(), &mut output).unwrap());
+		test::black_box(basenc::Encoding::decode_bytes_into(&SCATTERED, encoded.as_bytes(), &mut output).unwrap());
 	});
 }

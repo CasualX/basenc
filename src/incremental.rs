@@ -15,7 +15,7 @@ fn encode<E: basenc::Encoding>(encoding: &E, bytes: &[u8]) {
 	let chunk_size = E::RATIO.encoding_chunk_size(mem::size_of_val(&stack_buf));
 
 	for chunk in bytes.chunks(chunk_size) {
-		let string = encoding.encode_into(chunk, &mut stack_buf);
+		let string = encoding.encode_bytes_into(chunk, &mut stack_buf);
 		// println!("{}", string);
 	}
 }
@@ -32,7 +32,7 @@ fn decode<E: basenc::Encoding>(encoding: &E, string: &str) {
 	let chunk_size = E::RATIO.decoding_chunk_size(mem::size_of_val(&stack_buf));
 
 	for chunk in string.as_bytes().chunks(chunk_size) {
-		let bytes = encoding.decode_into(chunk, &mut stack_buf).unwrap();
+		let bytes = encoding.decode_bytes_into(chunk, &mut stack_buf).unwrap();
 		// println!("{:x?}", bytes);
 	}
 }

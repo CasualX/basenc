@@ -33,7 +33,7 @@ Buffers
 
 Buffers are types implementing the [`EncodeBuf`] and [`DecodeBuf`] traits.
 
-Existing buffers can be reused with the [`encode_into`](Encoding::encode_into) and [`decode_into`](Encoding::decode_into) methods.
+Existing buffers can be reused with the [`encode_bytes_into`](Encoding::encode_bytes_into) and [`decode_bytes_into`](Encoding::decode_bytes_into) methods.
 
 */
 
@@ -159,7 +159,7 @@ impl<'a, E: Encoding> fmt::Display for Display<'a, E> {
 		let chunk_size = E::RATIO.encoding_chunk_size(mem::size_of_val(&stack_buf));
 
 		for chunk in self.bytes.chunks(chunk_size) {
-			let string = self.encoding.encode_into(chunk, &mut stack_buf);
+			let string = self.encoding.encode_bytes_into(chunk, &mut stack_buf);
 			f.write_str(string)?;
 		}
 
@@ -180,8 +180,8 @@ pub trait Encoding: Sealed {
 	const RATIO: Ratio;
 
 	/// Encodes into an encoding buffer.
-	fn encode_into<B: EncodeBuf>(&self, bytes: &[u8], buffer: B) -> B::Output;
+	fn encode_bytes_into<B: EncodeBuf>(&self, bytes: &[u8], buffer: B) -> B::Output;
 
 	/// Decodes into a decoding buffer.
-	fn decode_into<B: DecodeBuf>(&self, string: &[u8], buffer: B) -> Result<B::Output, Error>;
+	fn decode_bytes_into<B: DecodeBuf>(&self, string: &[u8], buffer: B) -> Result<B::Output, Error>;
 }

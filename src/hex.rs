@@ -14,12 +14,12 @@ impl Encoding for LowerHex {
 	const RATIO: Ratio = RATIO;
 
 	#[inline]
-	fn encode_into<B: EncodeBuf>(&self, bytes: &[u8], buffer: B) -> B::Output {
+	fn encode_bytes_into<B: EncodeBuf>(&self, bytes: &[u8], buffer: B) -> B::Output {
 		encode(bytes, b'a', buffer)
 	}
 
 	#[inline]
-	fn decode_into<B: DecodeBuf>(&self, string: &[u8], buffer: B) -> Result<B::Output, Error> {
+	fn decode_bytes_into<B: DecodeBuf>(&self, string: &[u8], buffer: B) -> Result<B::Output, Error> {
 		decode(string, buffer)
 	}
 }
@@ -68,12 +68,12 @@ impl Encoding for UpperHex {
 	const RATIO: Ratio = RATIO;
 
 	#[inline]
-	fn encode_into<B: EncodeBuf>(&self, bytes: &[u8], buffer: B) -> B::Output {
+	fn encode_bytes_into<B: EncodeBuf>(&self, bytes: &[u8], buffer: B) -> B::Output {
 		encode(bytes, b'A', buffer)
 	}
 
 	#[inline]
-	fn decode_into<B: DecodeBuf>(&self, string: &[u8], buffer: B) -> Result<B::Output, Error> {
+	fn decode_bytes_into<B: DecodeBuf>(&self, string: &[u8], buffer: B) -> Result<B::Output, Error> {
 		decode(string, buffer)
 	}
 }
