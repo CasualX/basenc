@@ -33,6 +33,12 @@ jobs:
       - name: Run tests
         run: cargo test
 
+      - name: Check core-only no_std support
+        run: cargo check --lib --no-default-features
+
+      - name: Test no_std with alloc support
+        run: cargo test --no-default-features --features alloc
+
       - name: Run tests with static SSE2
         env:
           RUSTFLAGS: -C target-feature=+sse2,-ssse3

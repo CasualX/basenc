@@ -18,11 +18,15 @@ use core::{mem, slice, str};
 ///
 /// # Implementors
 ///
+/// With the `alloc` feature:
+///
 /// Convenience. Appends to the buffer and returns ownership.
 /// - `Vec<u8>`
 ///
 /// Efficient buffer reuse. Appends to the buffer.
 /// - `&mut Vec<u8>`
+///
+/// Available in all configurations:
 ///
 /// Stack buffers. Panics if the buffer is too small.
 /// - `&mut [u8]`
@@ -135,9 +139,9 @@ unsafe impl<'a> DecodeBuf for &'a mut [u8] {
 	}
 }
 
-#[cfg(any(test, feature = "std"))]
-unsafe impl DecodeBuf for ::std::vec::Vec<u8> {
-	type Output = ::std::vec::Vec<u8>;
+#[cfg(feature = "alloc")]
+unsafe impl DecodeBuf for alloc::vec::Vec<u8> {
+	type Output = alloc::vec::Vec<u8>;
 	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
 		self.reserve(len);
 		self.as_mut_ptr().add(self.len())
@@ -149,8 +153,8 @@ unsafe impl DecodeBuf for ::std::vec::Vec<u8> {
 	}
 }
 
-#[cfg(any(test, feature = "std"))]
-unsafe impl<'a> DecodeBuf for &'a mut ::std::vec::Vec<u8> {
+#[cfg(feature = "alloc")]
+unsafe impl<'a> DecodeBuf for &'a mut alloc::vec::Vec<u8> {
 	type Output = &'a [u8];
 	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
 		self.reserve(len);
@@ -177,12 +181,16 @@ unsafe impl<'a> DecodeBuf for &'a mut ::std::vec::Vec<u8> {
 ///
 /// # Implementors
 ///
+/// With the `alloc` feature:
+///
 /// Convenience. Appends to the buffer and returns ownership.
 /// - `String`
 ///
 /// Efficient buffer reuse. Appends to the buffer.
 /// - `&mut String`
 /// - `&mut Vec<u8>`
+///
+/// Available in all configurations:
 ///
 /// Stack buffers. Panics if the buffer is too small.
 /// - `&mut [u8]`
@@ -300,9 +308,9 @@ unsafe impl<'a> EncodeBuf for &'a mut [u8] {
 	}
 }
 
-#[cfg(any(test, feature = "std"))]
-unsafe impl EncodeBuf for ::std::string::String {
-	type Output = ::std::string::String;
+#[cfg(feature = "alloc")]
+unsafe impl EncodeBuf for alloc::string::String {
+	type Output = alloc::string::String;
 	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
 		let vec = self.as_mut_vec();
 		vec.reserve(len);
@@ -318,8 +326,8 @@ unsafe impl EncodeBuf for ::std::string::String {
 	}
 }
 
-#[cfg(any(test, feature = "std"))]
-unsafe impl<'a> EncodeBuf for &'a mut ::std::string::String {
+#[cfg(feature = "alloc")]
+unsafe impl<'a> EncodeBuf for &'a mut alloc::string::String {
 	type Output = &'a str;
 	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
 		let vec = self.as_mut_vec();
@@ -335,8 +343,8 @@ unsafe impl<'a> EncodeBuf for &'a mut ::std::string::String {
 	}
 }
 
-#[cfg(any(test, feature = "std"))]
-unsafe impl<'a> EncodeBuf for &'a mut ::std::vec::Vec<u8> {
+#[cfg(feature = "alloc")]
+unsafe impl<'a> EncodeBuf for &'a mut alloc::vec::Vec<u8> {
 	type Output = &'a str;
 	unsafe fn allocate(&mut self, len: usize) -> *mut u8 {
 		self.reserve(len);

@@ -1,6 +1,6 @@
 [package]
 name = "basenc"
-version = "1.0.0-alpha.1"
+version = "1.0.0-alpha.2"
 authors = ["Casper <CasualX@users.noreply.github.com>"]
 edition = "2024"
 rust-version = "1.95"
@@ -16,8 +16,11 @@ license = "MIT"
 [features]
 default = ["std", "simd-runtime"]
 
+# Support for allocating String and Vec results without requiring std
+alloc = []
+
 # Support for the standard library
-std = []
+std = ["alloc"]
 
 # SIMD acceleration
 simd-off = [] # Disable SIMD acceleration.

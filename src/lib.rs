@@ -12,15 +12,19 @@ Examples
 Encoding:
 
 ```
+# #[cfg(feature = "alloc")] {
 let encoded = basenc::Base64Std.encode(b"hello world");
 assert_eq!(encoded, "aGVsbG8gd29ybGQ=");
+# }
 ```
 
 Decoding:
 
 ```
+# #[cfg(feature = "alloc")] {
 let decoded = basenc::Base64Std.decode("aGVsbG8gd29ybGQ=").unwrap();
 assert_eq!(decoded, b"hello world");
+# }
 ```
 
 Padding
@@ -30,10 +34,12 @@ The standard Base64 and Base32 encodings emit padding by default. Use [`Padding`
 with an encoding's `pad` method to select a different policy.
 
 ```
+# #[cfg(feature = "alloc")] {
 use basenc::{Base64Std, Padding};
 
 let encoded = Base64Std.pad(Padding::Forbidden).encode(b"hello world");
 assert_eq!(encoded, "aGVsbG8gd29ybGQ");
+# }
 ```
 
 Encoding
@@ -50,9 +56,12 @@ Existing buffers can be reused with the [`encode_bytes_into`](Encoding::encode_b
 
 */
 
-#![cfg_attr(not(any(test, feature = "std")), no_std)]
+#![cfg_attr(not(feature = "std"), no_std)]
 
 #![allow(unsafe_op_in_unsafe_fn)] // All unsafe fn use unsafe code inside
+
+#[cfg(feature = "alloc")]
+extern crate alloc;
 
 #[allow(unused_imports)]
 use core::{fmt, mem, ptr, slice, str};

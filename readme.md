@@ -26,7 +26,7 @@ BaseNC requires Rust 1.95 or newer.
 * Optimized performance – SIMD-accelerated algorithms for blazing-fast encoding/decoding on x86, aarch64 and wasm32.
 * Zero dependencies – Lightweight and reliable, no extra baggage.
 * Simple, ergonomic API – Encode/decode in just a few lines of code.
-* #[no_std] support – Works seamlessly in embedded and constrained environments.
+* `no_std` support – Works seamlessly in embedded and constrained environments.
 
 🚀 Examples
 -----------
@@ -56,7 +56,9 @@ assert_eq!(encoded, "aGVsbG8gd29ybGQ");
 
 ### Features
 
-* `std` (default) - Enable support for the standard library, including convenient encoding/decoding to `String` and `Vec<u8>`.
+* `alloc` - Enable convenient encoding/decoding to `String` and `Vec<u8>` while remaining `no_std`.
+
+* `std` (default) - Enable standard-library integration. This implies `alloc`.
 
 * `simd-runtime` (default) - Enable runtime detection of SIMD support. This feature requires `std`, and will automatically use SIMD acceleration when available.
 

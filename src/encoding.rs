@@ -8,7 +8,7 @@ macro_rules! impl_encoding {
 			decode_into: [$(#[doc = $decode_into_example:literal])*],
 		)?
 	) => {
-		#[cfg(feature = "std")]
+		#[cfg(feature = "alloc")]
 		/// Encodes the input bytes.
 		$(
 			///
@@ -16,11 +16,11 @@ macro_rules! impl_encoding {
 			$(#[doc = $encode_example])*
 		)?
 		#[inline]
-		pub fn encode(&self, bytes: &[u8]) -> std::string::String {
-			crate::Encoding::encode_bytes_into(self, bytes, std::string::String::new())
+		pub fn encode(&self, bytes: &[u8]) -> alloc::string::String {
+			crate::Encoding::encode_bytes_into(self, bytes, alloc::string::String::new())
 		}
 
-		#[cfg(feature = "std")]
+		#[cfg(feature = "alloc")]
 		/// Decodes the input string.
 		$(
 			///
@@ -28,15 +28,15 @@ macro_rules! impl_encoding {
 			$(#[doc = $decode_example])*
 		)?
 		#[inline]
-		pub fn decode(&self, string: &str) -> Result<std::vec::Vec<u8>, crate::Error> {
+		pub fn decode(&self, string: &str) -> Result<alloc::vec::Vec<u8>, crate::Error> {
 			self.decode_bytes(string.as_bytes())
 		}
 
-		#[cfg(feature = "std")]
+		#[cfg(feature = "alloc")]
 		/// Decodes the input bytes.
 		#[inline]
-		pub fn decode_bytes(&self, bytes: &[u8]) -> Result<std::vec::Vec<u8>, crate::Error> {
-			crate::Encoding::decode_bytes_into(self, bytes, std::vec::Vec::new())
+		pub fn decode_bytes(&self, bytes: &[u8]) -> Result<alloc::vec::Vec<u8>, crate::Error> {
+			crate::Encoding::decode_bytes_into(self, bytes, alloc::vec::Vec::new())
 		}
 
 		/// Encodes into a buffer.

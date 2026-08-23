@@ -83,10 +83,9 @@ impl Base64Std {
 		],
 		decode_into: [
 			/// ```
-			/// let mut buffer = vec![0x11, 0x22, 0x33];
-			/// let decoded = basenc::Base64Std.decode_into("QnVGZkVyIFJlVXNFIQ", &mut buffer).unwrap();
+			/// let mut stack_buf = [0u8; 16];
+			/// let decoded = basenc::Base64Std.decode_into("QnVGZkVyIFJlVXNFIQ", &mut stack_buf).unwrap();
 			/// assert_eq!(decoded, b"BuFfEr ReUsE!");
-			/// assert_eq!(buffer, b"\x11\x22\x33BuFfEr ReUsE!");
 			/// ```
 		],
 	);

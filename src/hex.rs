@@ -47,7 +47,8 @@ impl LowerHex {
 		],
 		decode_into: [
 			/// ```
-			/// let decoded = basenc::LowerHex.decode_into("0080FFdc", Vec::new()).unwrap();
+			/// let mut buffer = [0u8; 4];
+			/// let decoded = basenc::LowerHex.decode_into("0080FFdc", &mut buffer).unwrap();
 			/// assert_eq!(decoded, b"\x00\x80\xFF\xDC");
 			/// ```
 		],
@@ -101,7 +102,8 @@ impl UpperHex {
 		],
 		decode_into: [
 			/// ```
-			/// let decoded = basenc::UpperHex.decode_into("0080ffDC", Vec::new()).unwrap();
+			/// let mut buffer = [0u8; 4];
+			/// let decoded = basenc::UpperHex.decode_into("0080ffDC", &mut buffer).unwrap();
 			/// assert_eq!(decoded, b"\x00\x80\xFF\xDC");
 			/// ```
 		],
